@@ -1,0 +1,27 @@
+# macOS system files
+.DS_Store
+
+# Build folders
+/build/
+/CMakeFiles/
+/Makefile
+/CMakeCache.txt
+/*.cmake
+/*.xcodeproj
+/*.xcworkspace
+
+# Compiled binaries
+*.exe
+*.out
+*.app
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.a
+*.lib
+
+# SDL submodule: generally do NOT ignore if it’s a submodule
+# If we ever have build files inside external/SDL, ignore them:
+external/SDL/build/
