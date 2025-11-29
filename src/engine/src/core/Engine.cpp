@@ -34,12 +34,11 @@ void Engine::Run() {
             m_input.ProcessEvent(event);
         }
         
-        // Update game logic (must check IsKeyJustPressed before Input::Update())
+        // Update game logic first (check justPressed before it gets reset)
         Update(deltaTime);
         
-        // Update input state: copy current frame state to previous frame
-        // This must happen AFTER game logic to preserve "just pressed" detection
-        m_input.Update();
+        // Update input state: process timers and reset justPressed/justReleased flags for next frame
+        m_input.Update(deltaTime);
         
         // Render frame
         Render();

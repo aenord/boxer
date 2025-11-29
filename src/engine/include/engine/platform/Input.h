@@ -1,52 +1,70 @@
 #pragma once
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_scancode.h>
 
 namespace engine {
 
 /**
- * Input state manager - tracks keyboard and mouse state with frame-to-frame comparison
- * for detecting "just pressed" and "just released" events
+ * Input state manager - tracks keyboard and mouse state with key repeat timers
+ * and mouse delta tracking
  */
 class Input {
 public:
     Input();
     ~Input();
     
-    // Copy current state to previous state (called after game logic update)
-    void Update();
+    // Update input state: reset mouse delta, update timers, and process justPressed/justReleased flags
+    void Update(float deltaTime);
     
     // Process SDL event to update current input state
     void ProcessEvent(const SDL_Event& event);
     
-    // Keyboard state queries
-    bool IsKeyPressed(SDL_Keycode key) const;        // Key currently held down
-    bool IsKeyJustPressed(SDL_Keycode key) const;    // Key pressed this frame only
-    bool IsKeyJustReleased(SDL_Keycode key) const;   // Key released this frame only
+    // Keyboard state queries (using scancodes for physical key detection)
+    bool IsKeyPressed(SDL_Scancode scancode) const;
+    bool IsKeyJustPressed(SDL_Scancode scancode) const;
+    bool IsKeyJustReleased(SDL_Scancode scancode) const;
     
     // Mouse state queries
     bool IsMouseButtonPressed(Uint8 button) const;
     bool IsMouseButtonJustPressed(Uint8 button) const;
     bool IsMouseButtonJustReleased(Uint8 button) const;
     
-    // Get current mouse position
+    // Mouse position and movement
     void GetMousePosition(int* x, int* y) const;
+    void GetMouseDelta(int* dx, int* dy) const;
     
 private:
-    static constexpr int MAX_KEYS = 512;          // Maximum keycode value to track
-    static constexpr int MAX_MOUSE_BUTTONS = 8;   // Maximum mouse button ID
+    // Key state structure for tracking press state and repeat timers
+    struct KeyState {
+        bool pressed = false;
+        bool justPressed = false;
+        bool justReleased = false;
+        float delayTimer = 0.f;   // Initial delay before repeat starts (200ms)
+        float repeatTimer = 0.f;  // Time between repeats (35ms)
+    };
     
-    // Keyboard state: current and previous frame
-    bool m_keys[MAX_KEYS] = {false};
-    bool m_keysPrevious[MAX_KEYS] = {false};
+    // Mouse button state structure
+    struct MouseButtonState {
+        bool pressed = false;
+        bool justPressed = false;
+        bool justReleased = false;
+    };
     
-    // Mouse state: current and previous frame
-    bool m_mouseButtons[MAX_MOUSE_BUTTONS] = {false};
-    bool m_mouseButtonsPrevious[MAX_MOUSE_BUTTONS] = {false};
+    static constexpr int MAX_SCANCODES = SDL_SCANCODE_COUNT;  // SDL3 scancode count (512)
+    static constexpr int MAX_MOUSE_BUTTONS = 8;              // Maximum mouse button ID
     
-    // Mouse position
+    // Keyboard state array (indexed by scancode)
+    KeyState m_keys[MAX_SCANCODES];
+    
+    // Mouse button state array
+    MouseButtonState m_mouseButtons[MAX_MOUSE_BUTTONS];
+    
+    // Mouse position and delta
     int m_mouseX = 0;
     int m_mouseY = 0;
+    int m_mouseDeltaX = 0;
+    int m_mouseDeltaY = 0;
 };
 
 } // namespace engine
