@@ -3,6 +3,7 @@ add_library(engine STATIC
     src/platform/Window.cpp
     src/platform/Input.cpp
     src/gfx/GLContext.cpp
+    src/gfx/Camera2D.cpp
 )
 
 target_include_directories(engine PUBLIC
