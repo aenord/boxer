@@ -3,7 +3,13 @@ add_library(engine STATIC
     src/platform/Window.cpp
     src/platform/Input.cpp
     src/gfx/GLContext.cpp
+    src/gfx/GLFunctions.cpp
     src/gfx/Camera2D.cpp
+    src/gfx/Shader.cpp
+    src/gfx/VertexBuffer.cpp
+    src/gfx/IndexBuffer.cpp
+    src/gfx/VertexArray.cpp
+    src/gfx/Renderer2D.cpp
 )
 
 target_include_directories(engine PUBLIC
