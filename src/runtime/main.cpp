@@ -1,79 +1,80 @@
 #include "engine/core/Engine.h"
 #include "engine/gfx/Camera2D.h"
+#include "engine/gfx/Renderer2D.h"
+#include "engine/math/Vec2.h"
+#include "engine/math/Vec4.h"
 #include <SDL3/SDL_scancode.h>
 #include <SDL3/SDL_log.h>
-#include <SDL3/SDL_opengl.h>
 
-// Test camera instance
+// Global instances
 static engine::Camera2D g_camera;
+static engine::Renderer2D g_renderer;
 
-// Simple test: log key presses and move camera
-void TestUpdate(float deltaTime, const engine::Input& input) {
+// Update: handle input and camera movement
+void GameUpdate(float deltaTime, const engine::Input& input) {
     // Move camera with arrow keys
-    float moveSpeed = 100.0f * deltaTime; // pixels per second
+    float moveSpeed = 200.0f * deltaTime;
     engine::Vec2 moveDelta(0.0f, 0.0f);
     
-    if (input.IsKeyPressed(SDL_SCANCODE_LEFT)) {
+    if (input.IsKeyPressed(SDL_SCANCODE_LEFT) || input.IsKeyPressed(SDL_SCANCODE_A)) {
         moveDelta.x -= moveSpeed;
     }
-    if (input.IsKeyPressed(SDL_SCANCODE_RIGHT)) {
+    if (input.IsKeyPressed(SDL_SCANCODE_RIGHT) || input.IsKeyPressed(SDL_SCANCODE_D)) {
         moveDelta.x += moveSpeed;
     }
-    if (input.IsKeyPressed(SDL_SCANCODE_UP)) {
+    if (input.IsKeyPressed(SDL_SCANCODE_UP) || input.IsKeyPressed(SDL_SCANCODE_W)) {
         moveDelta.y += moveSpeed;
     }
-    if (input.IsKeyPressed(SDL_SCANCODE_DOWN)) {
+    if (input.IsKeyPressed(SDL_SCANCODE_DOWN) || input.IsKeyPressed(SDL_SCANCODE_S)) {
         moveDelta.y -= moveSpeed;
     }
     
     if (moveDelta.x != 0.0f || moveDelta.y != 0.0f) {
         g_camera.Move(moveDelta);
-        SDL_Log("Camera position: (%.2f, %.2f)", g_camera.position.x, g_camera.position.y);
     }
     
     // Log key presses
     if (input.IsKeyJustPressed(SDL_SCANCODE_ESCAPE)) {
-        SDL_Log("Escape key pressed");
-    }
-    if (input.IsKeyJustPressed(SDL_SCANCODE_SPACE)) {
-        SDL_Log("Space key pressed");
-    }
-    
-    // Test view-projection matrix
-    if (input.IsKeyJustPressed(SDL_SCANCODE_P)) {
-        engine::Mat4 vp = g_camera.GetViewProjectionMatrix();
-        SDL_Log("View-Projection Matrix:");
-        SDL_Log("  [%.3f, %.3f, %.3f, %.3f]", vp.m[0], vp.m[4], vp.m[8], vp.m[12]);
-        SDL_Log("  [%.3f, %.3f, %.3f, %.3f]", vp.m[1], vp.m[5], vp.m[9], vp.m[13]);
-        SDL_Log("  [%.3f, %.3f, %.3f, %.3f]", vp.m[2], vp.m[6], vp.m[10], vp.m[14]);
-        SDL_Log("  [%.3f, %.3f, %.3f, %.3f]", vp.m[3], vp.m[7], vp.m[11], vp.m[15]);
+        SDL_Log("Escape pressed");
     }
 }
 
-void TestRender() {
-    // Simple clear with default background color
-    glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+// Render: draw scene using Renderer2D
+void GameRender() {
+    g_renderer.BeginFrame(g_camera);
+    
+    // Draw some colored quads
+    g_renderer.DrawQuad({0.0f, 0.0f}, {100.0f, 100.0f}, {1.0f, 0.0f, 0.0f, 1.0f});      // Red center
+    g_renderer.DrawQuad({150.0f, 0.0f}, {80.0f, 80.0f}, {0.0f, 1.0f, 0.0f, 1.0f});     // Green right
+    g_renderer.DrawQuad({-150.0f, 0.0f}, {80.0f, 80.0f}, {0.0f, 0.0f, 1.0f, 1.0f});    // Blue left
+    g_renderer.DrawQuad({0.0f, 120.0f}, {60.0f, 60.0f}, {1.0f, 1.0f, 0.0f, 1.0f});     // Yellow top
+    g_renderer.DrawQuad({0.0f, -120.0f}, {60.0f, 60.0f}, {1.0f, 0.0f, 1.0f, 1.0f});    // Magenta bottom
+    
+    g_renderer.EndFrame();
 }
 
 int main() {
-    engine::Engine engine("MyEngine", 800, 600);
+    engine::Engine engine("Renderer2D Test", 800, 600);
     
     // Initialize camera
     g_camera.SetViewportSize(800.0f, 600.0f);
     g_camera.SetPosition(engine::Vec2(0.0f, 0.0f));
     g_camera.zoom = 1.0f;
     
-    SDL_Log("Camera2D initialized");
-    SDL_Log("Controls:");
-    SDL_Log("  Arrow Keys - Move camera");
-    SDL_Log("  P - Print view-projection matrix");
+    // Initialize renderer
+    if (!g_renderer.Init()) {
+        SDL_Log("Failed to initialize Renderer2D");
+        return 1;
+    }
     
-    // Register callbacks for game logic
-    engine.SetUpdateCallback(TestUpdate);
-    engine.SetRenderCallback(TestRender);
+    SDL_Log("Renderer2D Test");
+    SDL_Log("Controls: WASD/Arrow keys to move camera");
     
-    // Start game loop
+    // Register callbacks
+    engine.SetUpdateCallback(GameUpdate);
+    engine.SetRenderCallback(GameRender);
+    
+    // Run game loop
     engine.Run();
     return 0;
 }
