@@ -52,6 +52,11 @@ public:
     void DrawQuad(const Vec2& position, const Vec2& size, const Texture2D& texture, 
                   const Vec4& tint = Vec4(1.0f, 1.0f, 1.0f, 1.0f));
     
+    // Draw a sub-region of a texture (for sprite sheets)
+    // uvRect: (minU, minV, maxU, maxV) - normalized texture coordinates
+    void DrawQuad(const Vec2& position, const Vec2& size, const Texture2D& texture,
+                  const Vec4& uvRect, const Vec4& tint);
+    
     // Check if initialized
     bool IsInitialized() const { return m_initialized; }
 
@@ -81,8 +86,9 @@ private:
     void StartBatch();
     
     // Internal: add a quad to the batch
+    // uvRect: (minU, minV, maxU, maxV) - use (0,0,1,1) for full texture
     void AddQuadToBatch(const Vec2& position, const Vec2& size, const Vec4& color, 
-                        const Texture2D* texture);
+                        const Texture2D* texture, const Vec4& uvRect);
     
     // Initialization helpers
     void CreateQuadMesh();

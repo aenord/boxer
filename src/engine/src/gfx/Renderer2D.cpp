@@ -191,16 +191,23 @@ void Renderer2D::Flush() {
 }
 
 void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, const Vec4& color) {
-    AddQuadToBatch(position, size, color, nullptr);
+    // Full UV rect (0,0) to (1,1)
+    AddQuadToBatch(position, size, color, nullptr, Vec4(0.0f, 0.0f, 1.0f, 1.0f));
 }
 
 void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, const Texture2D& texture, 
                           const Vec4& tint) {
-    AddQuadToBatch(position, size, tint, &texture);
+    // Full UV rect (0,0) to (1,1)
+    AddQuadToBatch(position, size, tint, &texture, Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+}
+
+void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, const Texture2D& texture,
+                          const Vec4& uvRect, const Vec4& tint) {
+    AddQuadToBatch(position, size, tint, &texture, uvRect);
 }
 
 void Renderer2D::AddQuadToBatch(const Vec2& position, const Vec2& size, const Vec4& color,
-                                 const Texture2D* texture) {
+                                 const Texture2D* texture, const Vec4& uvRect) {
     if (!m_initialized) return;
     
     // Check if batch is full
@@ -240,31 +247,37 @@ void Renderer2D::AddQuadToBatch(const Vec2& position, const Vec2& size, const Ve
     float halfW = size.x * 0.5f;
     float halfH = size.y * 0.5f;
     
+    // Extract UV coordinates from rect: (minU, minV, maxU, maxV)
+    float minU = uvRect.x;
+    float minV = uvRect.y;
+    float maxU = uvRect.z;
+    float maxV = uvRect.w;
+    
     // Bottom-left
     m_vertices.push_back({
         Vec2(position.x - halfW, position.y - halfH),
-        Vec2(0.0f, 0.0f),
+        Vec2(minU, minV),
         color,
         texIndex
     });
     // Bottom-right
     m_vertices.push_back({
         Vec2(position.x + halfW, position.y - halfH),
-        Vec2(1.0f, 0.0f),
+        Vec2(maxU, minV),
         color,
         texIndex
     });
     // Top-right
     m_vertices.push_back({
         Vec2(position.x + halfW, position.y + halfH),
-        Vec2(1.0f, 1.0f),
+        Vec2(maxU, maxV),
         color,
         texIndex
     });
     // Top-left
     m_vertices.push_back({
         Vec2(position.x - halfW, position.y + halfH),
-        Vec2(0.0f, 1.0f),
+        Vec2(minU, maxV),
         color,
         texIndex
     });

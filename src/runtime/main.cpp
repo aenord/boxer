@@ -62,21 +62,40 @@ void GameRender() {
     g_renderer.BeginFrame(g_camera);
     
     // Solid colored quads
-    g_renderer.DrawQuad({-200.0f, 0.0f}, {80.0f, 80.0f}, {1.0f, 0.0f, 0.0f, 1.0f});   // Red
-    g_renderer.DrawQuad({-200.0f, 100.0f}, {80.0f, 80.0f}, {0.0f, 1.0f, 0.0f, 1.0f}); // Green
-    g_renderer.DrawQuad({-200.0f, -100.0f}, {80.0f, 80.0f}, {0.0f, 0.0f, 1.0f, 1.0f}); // Blue
+    g_renderer.DrawQuad({-250.0f, 0.0f}, {60.0f, 60.0f}, {1.0f, 0.0f, 0.0f, 1.0f});   // Red
+    g_renderer.DrawQuad({-250.0f, 80.0f}, {60.0f, 60.0f}, {0.0f, 1.0f, 0.0f, 1.0f});  // Green
+    g_renderer.DrawQuad({-250.0f, -80.0f}, {60.0f, 60.0f}, {0.0f, 0.0f, 1.0f, 1.0f}); // Blue
     
-    // Procedural texture
+    // Full texture
     if (g_checkerTexture && g_checkerTexture->IsValid()) {
-        g_renderer.DrawQuad({0.0f, 0.0f}, {150.0f, 150.0f}, *g_checkerTexture);
+        g_renderer.DrawQuad({-100.0f, 0.0f}, {120.0f, 120.0f}, *g_checkerTexture);
     }
     
-    // PNG texture loaded from test file
+    // Sub-UV renderer test: draw quarters of the checkerboard texture
+    if (g_checkerTexture && g_checkerTexture->IsValid()) {
+        // Top-left quarter: UV (0,0.5) to (0.5,1)
+        g_renderer.DrawQuad({50.0f, 60.0f}, {60.0f, 60.0f}, *g_checkerTexture,
+                            {0.0f, 0.5f, 0.5f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f});
+        
+        // Top-right quarter: UV (0.5,0.5) to (1,1)
+        g_renderer.DrawQuad({120.0f, 60.0f}, {60.0f, 60.0f}, *g_checkerTexture,
+                            {0.5f, 0.5f, 1.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f});
+        
+        // Bottom-left quarter: UV (0,0) to (0.5,0.5)
+        g_renderer.DrawQuad({50.0f, -10.0f}, {60.0f, 60.0f}, *g_checkerTexture,
+                            {0.0f, 0.0f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f, 1.0f});
+        
+        // Bottom-right quarter: UV (0.5,0) to (1,0.5), with red tint
+        g_renderer.DrawQuad({120.0f, -10.0f}, {60.0f, 60.0f}, *g_checkerTexture,
+                            {0.5f, 0.0f, 1.0f, 0.5f}, {1.0f, 0.5f, 0.5f, 1.0f});
+    }
+    
+    // PNG texture
     if (g_pngTexture && g_pngTexture->IsValid()) {
-        float height = 200.0f;
+        float height = 180.0f;
         float aspect = static_cast<float>(g_pngTexture->GetWidth()) / g_pngTexture->GetHeight();
         float width = height * aspect;
-        g_renderer.DrawQuad({250.0f, 0.0f}, {width, height}, *g_pngTexture);
+        g_renderer.DrawQuad({280.0f, 0.0f}, {width, height}, *g_pngTexture);
     }
     
     g_renderer.EndFrame();
@@ -108,9 +127,9 @@ int main() {
         SDL_Log("Warning: Could not load assets/test.png");
     }
     
-    SDL_Log("Texture Test (stb_image)");
+    SDL_Log("Sub-UV Rendering Test");
     SDL_Log("Controls: WASD/Arrow keys to move camera");
-    SDL_Log("Left: solid colors | Center: procedural | Right: PNG from file");
+    SDL_Log("Shows: solid colors, full texture, sub-UV quarters, PNG texture");
     
     // Register callbacks
     engine.SetUpdateCallback(GameUpdate);
