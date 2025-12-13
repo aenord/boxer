@@ -191,23 +191,35 @@ void Renderer2D::Flush() {
 }
 
 void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, const Vec4& color) {
-    // Full UV rect (0,0) to (1,1)
-    AddQuadToBatch(position, size, color, nullptr, Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+    AddQuadToBatch(position, size, 0.0f, color, nullptr, Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+}
+
+void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, float rotation, const Vec4& color) {
+    AddQuadToBatch(position, size, rotation, color, nullptr, Vec4(0.0f, 0.0f, 1.0f, 1.0f));
 }
 
 void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, const Texture2D& texture, 
                           const Vec4& tint) {
-    // Full UV rect (0,0) to (1,1)
-    AddQuadToBatch(position, size, tint, &texture, Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+    AddQuadToBatch(position, size, 0.0f, tint, &texture, Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+}
+
+void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, float rotation,
+                          const Texture2D& texture, const Vec4& tint) {
+    AddQuadToBatch(position, size, rotation, tint, &texture, Vec4(0.0f, 0.0f, 1.0f, 1.0f));
 }
 
 void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, const Texture2D& texture,
                           const Vec4& uvRect, const Vec4& tint) {
-    AddQuadToBatch(position, size, tint, &texture, uvRect);
+    AddQuadToBatch(position, size, 0.0f, tint, &texture, uvRect);
 }
 
-void Renderer2D::AddQuadToBatch(const Vec2& position, const Vec2& size, const Vec4& color,
-                                 const Texture2D* texture, const Vec4& uvRect) {
+void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, float rotation,
+                          const Texture2D& texture, const Vec4& uvRect, const Vec4& tint) {
+    AddQuadToBatch(position, size, rotation, tint, &texture, uvRect);
+}
+
+void Renderer2D::AddQuadToBatch(const Vec2& position, const Vec2& size, float rotation,
+                                 const Vec4& color, const Texture2D* texture, const Vec4& uvRect) {
     if (!m_initialized) return;
     
     // Check if batch is full
@@ -247,6 +259,26 @@ void Renderer2D::AddQuadToBatch(const Vec2& position, const Vec2& size, const Ve
     float halfW = size.x * 0.5f;
     float halfH = size.y * 0.5f;
     
+    // Local-space corner offsets (relative to center)
+    Vec2 corners[4] = {
+        Vec2(-halfW, -halfH),  // Bottom-left
+        Vec2( halfW, -halfH),  // Bottom-right
+        Vec2( halfW,  halfH),  // Top-right
+        Vec2(-halfW,  halfH)   // Top-left
+    };
+    
+    // Apply rotation if needed
+    if (rotation != 0.0f) {
+        for (int i = 0; i < 4; ++i) {
+            corners[i] = corners[i].Rotated(rotation);
+        }
+    }
+    
+    // Translate to world position
+    for (int i = 0; i < 4; ++i) {
+        corners[i] = corners[i] + position;
+    }
+    
     // Extract UV coordinates from rect: (minU, minV, maxU, maxV)
     float minU = uvRect.x;
     float minV = uvRect.y;
@@ -255,28 +287,28 @@ void Renderer2D::AddQuadToBatch(const Vec2& position, const Vec2& size, const Ve
     
     // Bottom-left
     m_vertices.push_back({
-        Vec2(position.x - halfW, position.y - halfH),
+        corners[0],
         Vec2(minU, minV),
         color,
         texIndex
     });
     // Bottom-right
     m_vertices.push_back({
-        Vec2(position.x + halfW, position.y - halfH),
+        corners[1],
         Vec2(maxU, minV),
         color,
         texIndex
     });
     // Top-right
     m_vertices.push_back({
-        Vec2(position.x + halfW, position.y + halfH),
+        corners[2],
         Vec2(maxU, maxV),
         color,
         texIndex
     });
     // Top-left
     m_vertices.push_back({
-        Vec2(position.x - halfW, position.y + halfH),
+        corners[3],
         Vec2(minU, maxV),
         color,
         texIndex

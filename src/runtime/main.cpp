@@ -4,6 +4,7 @@
 #include "engine/gfx/Texture2D.h"
 #include "engine/math/Vec2.h"
 #include "engine/math/Vec4.h"
+#include "engine/math/MathUtils.h"
 #include <SDL3/SDL_scancode.h>
 #include <SDL3/SDL_log.h>
 #include <vector>
@@ -14,6 +15,7 @@ static engine::Camera2D g_camera;
 static engine::Renderer2D g_renderer;
 static std::unique_ptr<engine::Texture2D> g_checkerTexture;
 static std::unique_ptr<engine::Texture2D> g_pngTexture;
+static float g_rotation = 0.0f;  // Current rotation angle (radians)
 
 // Create a procedural checkerboard texture for testing
 std::unique_ptr<engine::Texture2D> CreateCheckerboardTexture(int size, int tileSize) {
@@ -36,6 +38,12 @@ std::unique_ptr<engine::Texture2D> CreateCheckerboardTexture(int size, int tileS
 
 // Update: handle input and camera movement
 void GameUpdate(float deltaTime, const engine::Input& input) {
+    // Animate rotation
+    g_rotation += deltaTime * 1.0f;  // 1 radian per second
+    if (g_rotation > engine::TWO_PI) {
+        g_rotation -= engine::TWO_PI;
+    }
+    
     float moveSpeed = 200.0f * deltaTime;
     engine::Vec2 moveDelta(0.0f, 0.0f);
     
@@ -61,41 +69,44 @@ void GameUpdate(float deltaTime, const engine::Input& input) {
 void GameRender() {
     g_renderer.BeginFrame(g_camera);
     
-    // Solid colored quads
-    g_renderer.DrawQuad({-250.0f, 0.0f}, {60.0f, 60.0f}, {1.0f, 0.0f, 0.0f, 1.0f});   // Red
-    g_renderer.DrawQuad({-250.0f, 80.0f}, {60.0f, 60.0f}, {0.0f, 1.0f, 0.0f, 1.0f});  // Green
-    g_renderer.DrawQuad({-250.0f, -80.0f}, {60.0f, 60.0f}, {0.0f, 0.0f, 1.0f, 1.0f}); // Blue
+    // Static solid colored quads
+    g_renderer.DrawQuad({-300.0f, 0.0f}, {50.0f, 50.0f}, {1.0f, 0.0f, 0.0f, 1.0f});   // Red
+    g_renderer.DrawQuad({-300.0f, 60.0f}, {50.0f, 50.0f}, {0.0f, 1.0f, 0.0f, 1.0f});  // Green
+    g_renderer.DrawQuad({-300.0f, -60.0f}, {50.0f, 50.0f}, {0.0f, 0.0f, 1.0f, 1.0f}); // Blue
     
-    // Full texture
+    // Rotating solid quads
+    g_renderer.DrawQuad({-200.0f, 0.0f}, {60.0f, 60.0f}, g_rotation, {1.0f, 1.0f, 0.0f, 1.0f}); // Yellow
+    g_renderer.DrawQuad({-200.0f, 80.0f}, {50.0f, 50.0f}, -g_rotation * 2.0f, {1.0f, 0.0f, 1.0f, 1.0f}); // Magenta
+    
+    // Rotating textured quad
     if (g_checkerTexture && g_checkerTexture->IsValid()) {
-        g_renderer.DrawQuad({-100.0f, 0.0f}, {120.0f, 120.0f}, *g_checkerTexture);
+        g_renderer.DrawQuad({-80.0f, 0.0f}, {100.0f, 100.0f}, g_rotation, *g_checkerTexture);
     }
     
-    // Sub-UV renderer test: draw quarters of the checkerboard texture
+    // Static sub-UV examples (4 quarters)
     if (g_checkerTexture && g_checkerTexture->IsValid()) {
-        // Top-left quarter: UV (0,0.5) to (0.5,1)
-        g_renderer.DrawQuad({50.0f, 60.0f}, {60.0f, 60.0f}, *g_checkerTexture,
+        g_renderer.DrawQuad({60.0f, 50.0f}, {50.0f, 50.0f}, *g_checkerTexture,
                             {0.0f, 0.5f, 0.5f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f});
-        
-        // Top-right quarter: UV (0.5,0.5) to (1,1)
-        g_renderer.DrawQuad({120.0f, 60.0f}, {60.0f, 60.0f}, *g_checkerTexture,
+        g_renderer.DrawQuad({120.0f, 50.0f}, {50.0f, 50.0f}, *g_checkerTexture,
                             {0.5f, 0.5f, 1.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f});
-        
-        // Bottom-left quarter: UV (0,0) to (0.5,0.5)
-        g_renderer.DrawQuad({50.0f, -10.0f}, {60.0f, 60.0f}, *g_checkerTexture,
+        g_renderer.DrawQuad({60.0f, -10.0f}, {50.0f, 50.0f}, *g_checkerTexture,
                             {0.0f, 0.0f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f, 1.0f});
-        
-        // Bottom-right quarter: UV (0.5,0) to (1,0.5), with red tint
-        g_renderer.DrawQuad({120.0f, -10.0f}, {60.0f, 60.0f}, *g_checkerTexture,
+        g_renderer.DrawQuad({120.0f, -10.0f}, {50.0f, 50.0f}, *g_checkerTexture,
                             {0.5f, 0.0f, 1.0f, 0.5f}, {1.0f, 0.5f, 0.5f, 1.0f});
     }
     
-    // PNG texture
+    // Rotating sub-UV (spinning quarter of texture)
+    if (g_checkerTexture && g_checkerTexture->IsValid()) {
+        g_renderer.DrawQuad({200.0f, 0.0f}, {80.0f, 80.0f}, g_rotation * 1.5f,
+                            *g_checkerTexture, {0.0f, 0.0f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f, 1.0f});
+    }
+    
+    // PNG texture (static)
     if (g_pngTexture && g_pngTexture->IsValid()) {
-        float height = 180.0f;
+        float height = 150.0f;
         float aspect = static_cast<float>(g_pngTexture->GetWidth()) / g_pngTexture->GetHeight();
         float width = height * aspect;
-        g_renderer.DrawQuad({280.0f, 0.0f}, {width, height}, *g_pngTexture);
+        g_renderer.DrawQuad({320.0f, 0.0f}, {width, height}, *g_pngTexture);
     }
     
     g_renderer.EndFrame();
@@ -127,9 +138,9 @@ int main() {
         SDL_Log("Warning: Could not load assets/test.png");
     }
     
-    SDL_Log("Sub-UV Rendering Test");
+    SDL_Log("Rotation + Sub-UV Test");
     SDL_Log("Controls: WASD/Arrow keys to move camera");
-    SDL_Log("Shows: solid colors, full texture, sub-UV quarters, PNG texture");
+    SDL_Log("Shows: static quads, rotating quads, sub-UV, rotating sub-UV");
     
     // Register callbacks
     engine.SetUpdateCallback(GameUpdate);
@@ -144,3 +155,4 @@ int main() {
     
     return 0;
 }
+
