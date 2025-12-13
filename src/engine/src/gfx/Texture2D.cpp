@@ -61,6 +61,9 @@ Texture2D& Texture2D::operator=(Texture2D&& other) noexcept {
     return *this;
 }
 
+// Upload RGBA pixel data to GPU and create OpenGL texture
+// data: RGBA pixel data (4 bytes per pixel)
+// width/height: image dimensions in pixels
 void Texture2D::CreateFromData(const uint8_t* data, int width, int height) {
     m_width = width;
     m_height = height;
@@ -68,13 +71,17 @@ void Texture2D::CreateFromData(const uint8_t* data, int width, int height) {
     glGenTextures(1, &m_textureID);
     glBindTexture(GL_TEXTURE_2D, m_textureID);
     
-    // Set texture parameters
+    // Texture wrapping: clamp to edge prevents sampling outside texture bounds
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    
+    // Texture filtering: linear for smooth scaling (use GL_NEAREST for pixel art)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     
-    // Upload texture data
+    // Upload pixel data to GPU
+    // GL_RGBA: internal format and source format
+    // GL_UNSIGNED_BYTE: 8 bits per channel
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, 
                  GL_RGBA, GL_UNSIGNED_BYTE, data);
     
@@ -83,10 +90,12 @@ void Texture2D::CreateFromData(const uint8_t* data, int width, int height) {
     SDL_Log("Created texture ID=%u (%dx%d)", m_textureID, width, height);
 }
 
+// Bind texture to a texture slot for sampling in shaders
+// OpenGL guarantees at least 16 slots (GL_TEXTURE0 through GL_TEXTURE15)
 void Texture2D::Bind(uint32_t slot) const {
     if (m_textureID != 0) {
-        glActiveTexture(GL_TEXTURE0 + slot);
-        glBindTexture(GL_TEXTURE_2D, m_textureID);
+        glActiveTexture(GL_TEXTURE0 + slot);  // Select texture unit
+        glBindTexture(GL_TEXTURE_2D, m_textureID);  // Bind texture to unit
     }
 }
 
