@@ -7,8 +7,27 @@
 #include <memory>
 #include <vector>
 #include <array>
+#include <cstdint>
 
 namespace engine {
+
+/**
+ * Texture flip flags (can be combined with |)
+ */
+enum class Flip : uint8_t {
+    None       = 0,
+    Horizontal = 1 << 0,  // Flip on X axis (left-right)
+    Vertical   = 1 << 1,  // Flip on Y axis (top-bottom)
+    Both       = Horizontal | Vertical
+};
+
+// Allow bitwise operations on Flip
+inline Flip operator|(Flip a, Flip b) {
+    return static_cast<Flip>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+}
+inline bool operator&(Flip a, Flip b) {
+    return (static_cast<uint8_t>(a) & static_cast<uint8_t>(b)) != 0;
+}
 
 class Shader;
 class VertexArray;
@@ -69,6 +88,20 @@ public:
     void DrawQuad(const Vec2& position, const Vec2& size, float rotation,
                   const Texture2D& texture, const Vec4& uvRect, const Vec4& tint);
     
+    // Draw a flipped textured quad
+    void DrawQuad(const Vec2& position, const Vec2& size, const Texture2D& texture,
+                  Flip flip, const Vec4& tint = Vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    
+    // Draw a rotated and flipped textured quad (full control)
+    void DrawQuad(const Vec2& position, const Vec2& size, float rotation,
+                  const Texture2D& texture, Flip flip,
+                  const Vec4& tint = Vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    
+    // Draw a rotated, flipped sub-region (ultimate control for sprites)
+    void DrawQuad(const Vec2& position, const Vec2& size, float rotation,
+                  const Texture2D& texture, const Vec4& uvRect,
+                  Flip flip, const Vec4& tint);
+    
     // Check if initialized
     bool IsInitialized() const { return m_initialized; }
 
@@ -100,8 +133,10 @@ private:
     // Internal: add a quad to the batch
     // uvRect: (minU, minV, maxU, maxV) - use (0,0,1,1) for full texture
     // rotation: angle in radians (0 = no rotation)
+    // flip: Flip flags for horizontal/vertical flipping
     void AddQuadToBatch(const Vec2& position, const Vec2& size, float rotation,
-                        const Vec4& color, const Texture2D* texture, const Vec4& uvRect);
+                        const Vec4& color, const Texture2D* texture, const Vec4& uvRect,
+                        Flip flip);
     
     // Initialization helpers
     void CreateQuadMesh();

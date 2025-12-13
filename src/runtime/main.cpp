@@ -101,12 +101,23 @@ void GameRender() {
                             *g_checkerTexture, {0.0f, 0.0f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f, 1.0f});
     }
     
-    // PNG texture (static)
+    // PNG texture with flip variations
     if (g_pngTexture && g_pngTexture->IsValid()) {
-        float height = 150.0f;
+        float height = 100.0f;
         float aspect = static_cast<float>(g_pngTexture->GetWidth()) / g_pngTexture->GetHeight();
         float width = height * aspect;
-        g_renderer.DrawQuad({320.0f, 0.0f}, {width, height}, *g_pngTexture);
+        
+        // Normal
+        g_renderer.DrawQuad({280.0f, 80.0f}, {width, height}, *g_pngTexture);
+        // Horizontal flip
+        g_renderer.DrawQuad({280.0f + width + 10.0f, 80.0f}, {width, height}, 
+                            *g_pngTexture, engine::Flip::Horizontal);
+        // Vertical flip
+        g_renderer.DrawQuad({280.0f, -40.0f}, {width, height}, 
+                            *g_pngTexture, engine::Flip::Vertical);
+        // Both flips
+        g_renderer.DrawQuad({280.0f + width + 10.0f, -40.0f}, {width, height}, 
+                            *g_pngTexture, engine::Flip::Both);
     }
     
     g_renderer.EndFrame();
@@ -138,9 +149,9 @@ int main() {
         SDL_Log("Warning: Could not load assets/test.png");
     }
     
-    SDL_Log("Rotation + Sub-UV Test");
+    SDL_Log("Rotation + Flip Test");
     SDL_Log("Controls: WASD/Arrow keys to move camera");
-    SDL_Log("Shows: static quads, rotating quads, sub-UV, rotating sub-UV");
+    SDL_Log("Shows: rotation, sub-UV, sprite flipping (H/V/Both)");
     
     // Register callbacks
     engine.SetUpdateCallback(GameUpdate);

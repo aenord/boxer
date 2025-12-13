@@ -191,35 +191,52 @@ void Renderer2D::Flush() {
 }
 
 void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, const Vec4& color) {
-    AddQuadToBatch(position, size, 0.0f, color, nullptr, Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+    AddQuadToBatch(position, size, 0.0f, color, nullptr, Vec4(0.0f, 0.0f, 1.0f, 1.0f), Flip::None);
 }
 
 void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, float rotation, const Vec4& color) {
-    AddQuadToBatch(position, size, rotation, color, nullptr, Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+    AddQuadToBatch(position, size, rotation, color, nullptr, Vec4(0.0f, 0.0f, 1.0f, 1.0f), Flip::None);
 }
 
 void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, const Texture2D& texture, 
                           const Vec4& tint) {
-    AddQuadToBatch(position, size, 0.0f, tint, &texture, Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+    AddQuadToBatch(position, size, 0.0f, tint, &texture, Vec4(0.0f, 0.0f, 1.0f, 1.0f), Flip::None);
 }
 
 void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, float rotation,
                           const Texture2D& texture, const Vec4& tint) {
-    AddQuadToBatch(position, size, rotation, tint, &texture, Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+    AddQuadToBatch(position, size, rotation, tint, &texture, Vec4(0.0f, 0.0f, 1.0f, 1.0f), Flip::None);
 }
 
 void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, const Texture2D& texture,
                           const Vec4& uvRect, const Vec4& tint) {
-    AddQuadToBatch(position, size, 0.0f, tint, &texture, uvRect);
+    AddQuadToBatch(position, size, 0.0f, tint, &texture, uvRect, Flip::None);
 }
 
 void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, float rotation,
                           const Texture2D& texture, const Vec4& uvRect, const Vec4& tint) {
-    AddQuadToBatch(position, size, rotation, tint, &texture, uvRect);
+    AddQuadToBatch(position, size, rotation, tint, &texture, uvRect, Flip::None);
+}
+
+void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, const Texture2D& texture,
+                          Flip flip, const Vec4& tint) {
+    AddQuadToBatch(position, size, 0.0f, tint, &texture, Vec4(0.0f, 0.0f, 1.0f, 1.0f), flip);
+}
+
+void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, float rotation,
+                          const Texture2D& texture, Flip flip, const Vec4& tint) {
+    AddQuadToBatch(position, size, rotation, tint, &texture, Vec4(0.0f, 0.0f, 1.0f, 1.0f), flip);
+}
+
+void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, float rotation,
+                          const Texture2D& texture, const Vec4& uvRect,
+                          Flip flip, const Vec4& tint) {
+    AddQuadToBatch(position, size, rotation, tint, &texture, uvRect, flip);
 }
 
 void Renderer2D::AddQuadToBatch(const Vec2& position, const Vec2& size, float rotation,
-                                 const Vec4& color, const Texture2D* texture, const Vec4& uvRect) {
+                                 const Vec4& color, const Texture2D* texture, const Vec4& uvRect,
+                                 Flip flip) {
     if (!m_initialized) return;
     
     // Check if batch is full
@@ -284,6 +301,20 @@ void Renderer2D::AddQuadToBatch(const Vec2& position, const Vec2& size, float ro
     float minV = uvRect.y;
     float maxU = uvRect.z;
     float maxV = uvRect.w;
+    
+    // Apply horizontal flip (swap left and right U coordinates)
+    if (flip & Flip::Horizontal) {
+        float temp = minU;
+        minU = maxU;
+        maxU = temp;
+    }
+    
+    // Apply vertical flip (swap top and bottom V coordinates)
+    if (flip & Flip::Vertical) {
+        float temp = minV;
+        minV = maxV;
+        maxV = temp;
+    }
     
     // Bottom-left
     m_vertices.push_back({
