@@ -12,6 +12,7 @@ add_library(engine STATIC
     src/gfx/Texture2D.cpp
     src/gfx/Renderer2D.cpp
     src/gfx/SpriteSheet.cpp
+    src/gfx/Tilemap.cpp
     src/utils/JsonParser.cpp
     src/stb_image.cpp
 )
