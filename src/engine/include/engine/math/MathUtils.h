@@ -35,5 +35,10 @@ inline float Clamp(float value, float min, float max) {
     return value < min ? min : (value > max ? max : value);
 }
 
+// Linear interpolation
+inline float Lerp(float a, float b, float t) {
+    return a + (b - a) * t;
+}
+
 } // namespace engine
 
