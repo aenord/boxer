@@ -1,21 +1,95 @@
 #include "engine/gfx/Camera2D.h"
+#include "engine/math/MathUtils.h"
+#include <cmath>
 
 namespace engine {
 
-Camera2D::Camera2D() : position(0.0f, 0.0f), zoom(1.0f) {
+Camera2D::Camera2D() : position(0.0f, 0.0f), zoom(1.0f), m_target(0.0f, 0.0f) {
+}
+
+void Camera2D::Update(float deltaTime) {
+    if (!smoothEnabled || smoothSpeed <= 0.0f) {
+        // No smoothing - snap to target immediately
+        position = m_target;
+        return;
+    }
+    
+    // Lerp toward target position
+    // Using exponential smoothing: lerp factor based on deltaTime
+    float t = 1.0f - std::exp(-smoothSpeed * deltaTime);
+    position = position.Lerp(m_target, t);
 }
 
 void Camera2D::SetPosition(const Vec2& pos) {
     position = pos;
+    m_target = pos;  // Also update target to prevent snapping
+}
+
+void Camera2D::SetTarget(const Vec2& target) {
+    m_target = target;
+    if (!smoothEnabled) {
+        position = target;  // Snap immediately if smoothing disabled
+    }
 }
 
 void Camera2D::Move(const Vec2& delta) {
     position = position + delta;
+    m_target = m_target + delta;
+}
+
+void Camera2D::MoveTarget(const Vec2& delta) {
+    m_target = m_target + delta;
+    if (!smoothEnabled) {
+        position = m_target;
+    }
 }
 
 void Camera2D::SetViewportSize(float width, float height) {
     m_viewportWidth = width;
     m_viewportHeight = height;
+}
+
+// Get position with pixel snapping applied if enabled
+Vec2 Camera2D::GetRenderPosition() const {
+    if (pixelSnap) {
+        return Vec2(std::floor(position.x), std::floor(position.y));
+    }
+    return position;
+}
+
+Vec2 Camera2D::ScreenToWorld(const Vec2& screenPos) const {
+    // Convert screen coordinates (0,0 = top-left) to world coordinates
+    // Screen center = camera position
+    Vec2 renderPos = GetRenderPosition();
+    float halfWidth = (m_viewportWidth / 2.0f) / zoom;
+    float halfHeight = (m_viewportHeight / 2.0f) / zoom;
+    
+    // Screen to NDC: (0,0) -> (-1,1), (width,height) -> (1,-1)
+    float ndcX = (screenPos.x / m_viewportWidth) * 2.0f - 1.0f;
+    float ndcY = 1.0f - (screenPos.y / m_viewportHeight) * 2.0f;  // Flip Y
+    
+    // NDC to world
+    return Vec2(
+        renderPos.x + ndcX * halfWidth,
+        renderPos.y + ndcY * halfHeight
+    );
+}
+
+Vec2 Camera2D::WorldToScreen(const Vec2& worldPos) const {
+    // Convert world coordinates to screen coordinates
+    Vec2 renderPos = GetRenderPosition();
+    float halfWidth = (m_viewportWidth / 2.0f) / zoom;
+    float halfHeight = (m_viewportHeight / 2.0f) / zoom;
+    
+    // World to NDC
+    float ndcX = (worldPos.x - renderPos.x) / halfWidth;
+    float ndcY = (worldPos.y - renderPos.y) / halfHeight;
+    
+    // NDC to screen (flip Y)
+    return Vec2(
+        (ndcX + 1.0f) * 0.5f * m_viewportWidth,
+        (1.0f - ndcY) * 0.5f * m_viewportHeight
+    );
 }
 
 Mat4 Camera2D::GetProjectionMatrix() const {
@@ -62,6 +136,8 @@ Mat4 Camera2D::GetProjectionMatrix() const {
 Mat4 Camera2D::GetViewMatrix() const {
     // Create view matrix (translation by negative camera position)
     // This moves the world so the camera appears at the origin
+    // Use render position for pixel snapping
+    Vec2 renderPos = GetRenderPosition();
     Mat4 view;
     
     // Translation matrix (column-major)
@@ -80,8 +156,8 @@ Mat4 Camera2D::GetViewMatrix() const {
     view.m[10] = 1.0f;
     view.m[11] = 0.0f;
     
-    view.m[12] = -position.x;
-    view.m[13] = -position.y;
+    view.m[12] = -renderPos.x;
+    view.m[13] = -renderPos.y;
     view.m[14] = 0.0f;
     view.m[15] = 1.0f;
     
@@ -109,4 +185,3 @@ Mat4 Camera2D::GetViewProjectionMatrix() const {
 }
 
 } // namespace engine
-

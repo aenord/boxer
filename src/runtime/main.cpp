@@ -20,6 +20,7 @@ static std::unique_ptr<engine::Tilemap> g_tilemap;
 
 // Update: handle input and camera movement
 void GameUpdate(float deltaTime, const engine::Input& input) {
+    // Move camera target based on input
     float moveSpeed = 200.0f * deltaTime;
     engine::Vec2 moveDelta(0.0f, 0.0f);
     
@@ -37,8 +38,11 @@ void GameUpdate(float deltaTime, const engine::Input& input) {
     }
     
     if (moveDelta.x != 0.0f || moveDelta.y != 0.0f) {
-        g_camera.Move(moveDelta);
+        g_camera.MoveTarget(moveDelta);
     }
+    
+    // Update camera (smooth follow)
+    g_camera.Update(deltaTime);
 }
 
 // Render: draw tilemap
@@ -60,10 +64,13 @@ void GameRender() {
 int main() {
     engine::Engine engine("Tilemap Test", 800, 600);
     
-    // Initialize camera
+    // Initialize camera with smooth following and pixel snapping
     g_camera.SetViewportSize(800.0f, 600.0f);
     g_camera.SetPosition(engine::Vec2(0.0f, 0.0f));
     g_camera.zoom = 1.0f;
+    g_camera.smoothEnabled = true;
+    g_camera.smoothSpeed = 5.0f;   // Adjust for faster/slower follow
+    g_camera.pixelSnap = false;    // Set to true for crisp pixel art rendering
     
     // Initialize renderer
     if (!g_renderer.Init()) {
@@ -89,10 +96,12 @@ int main() {
     // Fill tilemap with a single tile type
     g_tilemap->Fill(0);
     
-    SDL_Log("Tilemap Test");
+    SDL_Log("Camera + Tilemap Test");
     SDL_Log("Map size: %dx%d tiles (%.0fx%.0f pixels)",
             g_tilemap->GetWidth(), g_tilemap->GetHeight(),
             g_tilemap->GetWorldWidth(), g_tilemap->GetWorldHeight());
+    SDL_Log("Camera: smooth=%.1f, pixelSnap=%s", 
+            g_camera.smoothSpeed, g_camera.pixelSnap ? "on" : "off");
     SDL_Log("Controls: WASD/Arrow keys to move camera");
     
     // Register callbacks
