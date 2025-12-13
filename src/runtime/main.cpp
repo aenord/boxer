@@ -13,6 +13,7 @@
 static engine::Camera2D g_camera;
 static engine::Renderer2D g_renderer;
 static std::unique_ptr<engine::Texture2D> g_checkerTexture;
+static std::unique_ptr<engine::Texture2D> g_pngTexture;
 
 // Create a procedural checkerboard texture for testing
 std::unique_ptr<engine::Texture2D> CreateCheckerboardTexture(int size, int tileSize) {
@@ -65,17 +66,17 @@ void GameRender() {
     g_renderer.DrawQuad({-200.0f, 100.0f}, {80.0f, 80.0f}, {0.0f, 1.0f, 0.0f, 1.0f}); // Green
     g_renderer.DrawQuad({-200.0f, -100.0f}, {80.0f, 80.0f}, {0.0f, 0.0f, 1.0f, 1.0f}); // Blue
     
-    // Textured quad (no tint - original colors)
+    // Procedural texture
     if (g_checkerTexture && g_checkerTexture->IsValid()) {
         g_renderer.DrawQuad({0.0f, 0.0f}, {150.0f, 150.0f}, *g_checkerTexture);
-        
-        // Textured quad with red tint
-        g_renderer.DrawQuad({200.0f, 0.0f}, {100.0f, 100.0f}, *g_checkerTexture, 
-                            {1.0f, 0.5f, 0.5f, 1.0f});
-        
-        // Textured quad with blue tint
-        g_renderer.DrawQuad({200.0f, 120.0f}, {100.0f, 100.0f}, *g_checkerTexture, 
-                            {0.5f, 0.5f, 1.0f, 1.0f});
+    }
+    
+    // PNG texture loaded from test file
+    if (g_pngTexture && g_pngTexture->IsValid()) {
+        float height = 200.0f;
+        float aspect = static_cast<float>(g_pngTexture->GetWidth()) / g_pngTexture->GetHeight();
+        float width = height * aspect;
+        g_renderer.DrawQuad({250.0f, 0.0f}, {width, height}, *g_pngTexture);
     }
     
     g_renderer.EndFrame();
@@ -95,15 +96,21 @@ int main() {
         return 1;
     }
     
-    // Create test texture (64x64 checkerboard with 8px tiles)
+    // Create procedural checkerboard texture
     g_checkerTexture = CreateCheckerboardTexture(64, 8);
     if (g_checkerTexture && g_checkerTexture->IsValid()) {
         SDL_Log("Created checkerboard texture");
     }
     
-    SDL_Log("Texture Test");
+    // Load PNG texture from file (tests stb_image)
+    g_pngTexture = std::make_unique<engine::Texture2D>("assets/test.png");
+    if (!g_pngTexture || !g_pngTexture->IsValid()) {
+        SDL_Log("Warning: Could not load assets/test.png");
+    }
+    
+    SDL_Log("Texture Test (stb_image)");
     SDL_Log("Controls: WASD/Arrow keys to move camera");
-    SDL_Log("Left: solid color quads | Center: texture | Right: tinted textures");
+    SDL_Log("Left: solid colors | Center: procedural | Right: PNG from file");
     
     // Register callbacks
     engine.SetUpdateCallback(GameUpdate);
@@ -113,6 +120,7 @@ int main() {
     engine.Run();
     
     // Cleanup
+    g_pngTexture.reset();
     g_checkerTexture.reset();
     
     return 0;

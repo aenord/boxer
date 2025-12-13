@@ -11,10 +11,12 @@ add_library(engine STATIC
     src/gfx/VertexArray.cpp
     src/gfx/Texture2D.cpp
     src/gfx/Renderer2D.cpp
+    src/stb_image.cpp
 )
 
 target_include_directories(engine PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/external/stb
 )
 
 # SDL3::SDL3 is a target exposed by the SDL submodule

@@ -2,34 +2,23 @@
 #include "engine/gfx/GLFunctions.h"
 #include <SDL3/SDL_opengl.h>
 #include <SDL3/SDL_log.h>
-#include <SDL3/SDL_surface.h>
+#include <stb_image.h>
 
 namespace engine {
 
-// Use global OpenGL functions for basic texture operations (available in GL 1.1)
-// These are directly linked, not loaded via GetProcAddress
-
 Texture2D::Texture2D(const std::string& path) {
-    // Load BMP using SDL (built-in, no SDL_image needed)
-    SDL_Surface* surface = SDL_LoadBMP(path.c_str());
-    if (!surface) {
-        SDL_Log("Failed to load texture '%s': %s", path.c_str(), SDL_GetError());
+    // Load image using stb_image (supports PNG, JPG, BMP, etc.)
+    int width, height, channels;
+    stbi_set_flip_vertically_on_load(true);  // OpenGL expects bottom-left origin
+    uint8_t* data = stbi_load(path.c_str(), &width, &height, &channels, 4);  // Force RGBA
+    
+    if (!data) {
+        SDL_Log("Failed to load texture '%s': %s", path.c_str(), stbi_failure_reason());
         return;
     }
     
-    // Convert to RGBA format
-    SDL_Surface* converted = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
-    SDL_DestroySurface(surface);
-    
-    if (!converted) {
-        SDL_Log("Failed to convert texture format: %s", SDL_GetError());
-        return;
-    }
-    
-    CreateFromData(static_cast<const uint8_t*>(converted->pixels), 
-                   converted->w, converted->h);
-    
-    SDL_DestroySurface(converted);
+    CreateFromData(data, width, height);
+    stbi_image_free(data);
     
     if (m_textureID != 0) {
         SDL_Log("Loaded texture '%s' (%dx%d)", path.c_str(), m_width, m_height);
