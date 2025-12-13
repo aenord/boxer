@@ -1,6 +1,4 @@
 #include "engine/gfx/VertexArray.h"
-#include "engine/gfx/VertexBuffer.h"
-#include "engine/gfx/IndexBuffer.h"
 #include "engine/gfx/GLFunctions.h"
 
 namespace engine {
@@ -43,18 +41,6 @@ void VertexArray::SetQuadLayout() {
     // Color attribute (location 2): 4 floats at offset 16 bytes
     glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, stride, (void*)(4 * sizeof(float)));
     glEnableVertexAttribArray(2);
-}
-
-void VertexArray::SetVertexBuffer(std::shared_ptr<VertexBuffer> vbo) {
-    m_vertexBuffer = vbo;
-    Bind();
-    vbo->Bind();
-}
-
-void VertexArray::SetIndexBuffer(std::shared_ptr<IndexBuffer> ibo) {
-    m_indexBuffer = ibo;
-    Bind();
-    ibo->Bind();
 }
 
 } // namespace engine

@@ -1,16 +1,12 @@
 #pragma once
 
 #include <SDL3/SDL_opengl.h>
-#include <memory>
 
 namespace engine {
 
-class VertexBuffer;
-class IndexBuffer;
-
 /**
  * RAII wrapper for OpenGL Vertex Array Object (VAO)
- * Manages vertex attribute configuration and buffer bindings
+ * Manages vertex attribute configuration
  */
 class VertexArray {
 public:
@@ -27,19 +23,14 @@ public:
     /**
      * Configure vertex attributes for bound VBO
      * Standard 2D quad layout: position (vec2), texcoord (vec2), color (vec4)
+     * Call this while VAO and VBO are bound
      */
     void SetQuadLayout();
     
-    void SetVertexBuffer(std::shared_ptr<VertexBuffer> vbo);
-    void SetIndexBuffer(std::shared_ptr<IndexBuffer> ibo);
-    
-    const std::shared_ptr<IndexBuffer>& GetIndexBuffer() const { return m_indexBuffer; }
     GLuint GetID() const { return m_arrayID; }
 
 private:
     GLuint m_arrayID = 0;
-    std::shared_ptr<VertexBuffer> m_vertexBuffer;
-    std::shared_ptr<IndexBuffer> m_indexBuffer;
 };
 
 } // namespace engine
