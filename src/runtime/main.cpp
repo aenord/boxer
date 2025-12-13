@@ -2,6 +2,7 @@
 #include "engine/gfx/Camera2D.h"
 #include "engine/gfx/Renderer2D.h"
 #include "engine/gfx/Texture2D.h"
+#include "engine/gfx/SpriteSheet.h"
 #include "engine/math/Vec2.h"
 #include "engine/math/Vec4.h"
 #include "engine/math/MathUtils.h"
@@ -14,7 +15,7 @@
 static engine::Camera2D g_camera;
 static engine::Renderer2D g_renderer;
 static std::unique_ptr<engine::Texture2D> g_checkerTexture;
-static std::unique_ptr<engine::Texture2D> g_pngTexture;
+static engine::SpriteSheet g_spriteSheet;
 static float g_rotation = 0.0f;  // Current rotation angle (radians)
 
 // Create a procedural checkerboard texture for testing
@@ -101,23 +102,33 @@ void GameRender() {
                             *g_checkerTexture, {0.0f, 0.0f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f, 1.0f});
     }
     
-    // PNG texture with flip variations
-    if (g_pngTexture && g_pngTexture->IsValid()) {
-        float height = 100.0f;
-        float aspect = static_cast<float>(g_pngTexture->GetWidth()) / g_pngTexture->GetHeight();
-        float width = height * aspect;
+    // Sprite sheet demo - draw named sprites
+    if (g_spriteSheet.IsValid()) {
+        const engine::Texture2D* tex = g_spriteSheet.GetTexture();
         
-        // Normal
-        g_renderer.DrawQuad({280.0f, 80.0f}, {width, height}, *g_pngTexture);
-        // Horizontal flip
-        g_renderer.DrawQuad({280.0f + width + 10.0f, 80.0f}, {width, height}, 
-                            *g_pngTexture, engine::Flip::Horizontal);
-        // Vertical flip
-        g_renderer.DrawQuad({280.0f, -40.0f}, {width, height}, 
-                            *g_pngTexture, engine::Flip::Vertical);
-        // Both flips
-        g_renderer.DrawQuad({280.0f + width + 10.0f, -40.0f}, {width, height}, 
-                            *g_pngTexture, engine::Flip::Both);
+        // Draw quarters using named sprites
+        if (auto* sprite = g_spriteSheet.GetSprite("top_left")) {
+            float h = 80.0f;
+            float w = h * sprite->GetAspectRatio();
+            g_renderer.DrawQuad({250.0f, 50.0f}, {w, h}, *tex, sprite->uvRect, {1,1,1,1});
+        }
+        if (auto* sprite = g_spriteSheet.GetSprite("top_right")) {
+            float h = 80.0f;
+            float w = h * sprite->GetAspectRatio();
+            g_renderer.DrawQuad({320.0f, 50.0f}, {w, h}, *tex, sprite->uvRect, {1,1,1,1});
+        }
+        if (auto* sprite = g_spriteSheet.GetSprite("bottom_left")) {
+            float h = 80.0f;
+            float w = h * sprite->GetAspectRatio();
+            g_renderer.DrawQuad({250.0f, -40.0f}, {w, h}, *tex, sprite->uvRect, {1,1,1,1});
+        }
+        if (auto* sprite = g_spriteSheet.GetSprite("bottom_right")) {
+            float h = 80.0f;
+            float w = h * sprite->GetAspectRatio();
+            // With horizontal flip
+            g_renderer.DrawQuad({320.0f, -40.0f}, {w, h}, 0.0f, *tex, sprite->uvRect, 
+                                engine::Flip::Horizontal, {1,1,1,1});
+        }
     }
     
     g_renderer.EndFrame();
@@ -143,15 +154,14 @@ int main() {
         SDL_Log("Created checkerboard texture");
     }
     
-    // Load PNG texture from file (tests stb_image)
-    g_pngTexture = std::make_unique<engine::Texture2D>("assets/test.png");
-    if (!g_pngTexture || !g_pngTexture->IsValid()) {
-        SDL_Log("Warning: Could not load assets/test.png");
+    // Load sprite sheet from JSON
+    if (!g_spriteSheet.LoadFromFile("assets/sprites.json")) {
+        SDL_Log("Warning: Failed to load sprite sheet");
     }
     
-    SDL_Log("Rotation + Flip Test");
+    SDL_Log("Sprite Sheet Test");
     SDL_Log("Controls: WASD/Arrow keys to move camera");
-    SDL_Log("Shows: rotation, sub-UV, sprite flipping (H/V/Both)");
+    SDL_Log("Shows: named sprites from JSON, rotation, sub-UV, flipping");
     
     // Register callbacks
     engine.SetUpdateCallback(GameUpdate);
@@ -161,7 +171,6 @@ int main() {
     engine.Run();
     
     // Cleanup
-    g_pngTexture.reset();
     g_checkerTexture.reset();
     
     return 0;
