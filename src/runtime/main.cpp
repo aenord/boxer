@@ -1,18 +1,40 @@
 #include "engine/core/Engine.h"
 #include "engine/gfx/Camera2D.h"
 #include "engine/gfx/Renderer2D.h"
+#include "engine/gfx/Texture2D.h"
 #include "engine/math/Vec2.h"
 #include "engine/math/Vec4.h"
 #include <SDL3/SDL_scancode.h>
 #include <SDL3/SDL_log.h>
+#include <vector>
+#include <cstdint>
 
 // Global instances
 static engine::Camera2D g_camera;
 static engine::Renderer2D g_renderer;
+static std::unique_ptr<engine::Texture2D> g_checkerTexture;
+
+// Create a procedural checkerboard texture for testing
+std::unique_ptr<engine::Texture2D> CreateCheckerboardTexture(int size, int tileSize) {
+    std::vector<uint8_t> pixels(size * size * 4);
+    
+    for (int y = 0; y < size; ++y) {
+        for (int x = 0; x < size; ++x) {
+            int idx = (y * size + x) * 4;
+            bool white = ((x / tileSize) + (y / tileSize)) % 2 == 0;
+            uint8_t color = white ? 255 : 100;
+            pixels[idx + 0] = color;  // R
+            pixels[idx + 1] = color;  // G
+            pixels[idx + 2] = color;  // B
+            pixels[idx + 3] = 255;    // A
+        }
+    }
+    
+    return std::make_unique<engine::Texture2D>(pixels.data(), size, size);
+}
 
 // Update: handle input and camera movement
 void GameUpdate(float deltaTime, const engine::Input& input) {
-    // Move camera with arrow keys
     float moveSpeed = 200.0f * deltaTime;
     engine::Vec2 moveDelta(0.0f, 0.0f);
     
@@ -32,29 +54,35 @@ void GameUpdate(float deltaTime, const engine::Input& input) {
     if (moveDelta.x != 0.0f || moveDelta.y != 0.0f) {
         g_camera.Move(moveDelta);
     }
-    
-    // Log key presses
-    if (input.IsKeyJustPressed(SDL_SCANCODE_ESCAPE)) {
-        SDL_Log("Escape pressed");
-    }
 }
 
 // Render: draw scene using Renderer2D
 void GameRender() {
     g_renderer.BeginFrame(g_camera);
     
-    // Draw some colored quads
-    g_renderer.DrawQuad({0.0f, 0.0f}, {100.0f, 100.0f}, {1.0f, 0.0f, 0.0f, 1.0f});      // Red center
-    g_renderer.DrawQuad({150.0f, 0.0f}, {80.0f, 80.0f}, {0.0f, 1.0f, 0.0f, 1.0f});     // Green right
-    g_renderer.DrawQuad({-150.0f, 0.0f}, {80.0f, 80.0f}, {0.0f, 0.0f, 1.0f, 1.0f});    // Blue left
-    g_renderer.DrawQuad({0.0f, 120.0f}, {60.0f, 60.0f}, {1.0f, 1.0f, 0.0f, 1.0f});     // Yellow top
-    g_renderer.DrawQuad({0.0f, -120.0f}, {60.0f, 60.0f}, {1.0f, 0.0f, 1.0f, 1.0f});    // Magenta bottom
+    // Solid colored quads
+    g_renderer.DrawQuad({-200.0f, 0.0f}, {80.0f, 80.0f}, {1.0f, 0.0f, 0.0f, 1.0f});   // Red
+    g_renderer.DrawQuad({-200.0f, 100.0f}, {80.0f, 80.0f}, {0.0f, 1.0f, 0.0f, 1.0f}); // Green
+    g_renderer.DrawQuad({-200.0f, -100.0f}, {80.0f, 80.0f}, {0.0f, 0.0f, 1.0f, 1.0f}); // Blue
+    
+    // Textured quad (no tint - original colors)
+    if (g_checkerTexture && g_checkerTexture->IsValid()) {
+        g_renderer.DrawQuad({0.0f, 0.0f}, {150.0f, 150.0f}, *g_checkerTexture);
+        
+        // Textured quad with red tint
+        g_renderer.DrawQuad({200.0f, 0.0f}, {100.0f, 100.0f}, *g_checkerTexture, 
+                            {1.0f, 0.5f, 0.5f, 1.0f});
+        
+        // Textured quad with blue tint
+        g_renderer.DrawQuad({200.0f, 120.0f}, {100.0f, 100.0f}, *g_checkerTexture, 
+                            {0.5f, 0.5f, 1.0f, 1.0f});
+    }
     
     g_renderer.EndFrame();
 }
 
 int main() {
-    engine::Engine engine("Renderer2D Test", 800, 600);
+    engine::Engine engine("Texture Test", 800, 600);
     
     // Initialize camera
     g_camera.SetViewportSize(800.0f, 600.0f);
@@ -67,8 +95,15 @@ int main() {
         return 1;
     }
     
-    SDL_Log("Renderer2D Test");
+    // Create test texture (64x64 checkerboard with 8px tiles)
+    g_checkerTexture = CreateCheckerboardTexture(64, 8);
+    if (g_checkerTexture && g_checkerTexture->IsValid()) {
+        SDL_Log("Created checkerboard texture");
+    }
+    
+    SDL_Log("Texture Test");
     SDL_Log("Controls: WASD/Arrow keys to move camera");
+    SDL_Log("Left: solid color quads | Center: texture | Right: tinted textures");
     
     // Register callbacks
     engine.SetUpdateCallback(GameUpdate);
@@ -76,5 +111,9 @@ int main() {
     
     // Run game loop
     engine.Run();
+    
+    // Cleanup
+    g_checkerTexture.reset();
+    
     return 0;
 }

@@ -39,6 +39,15 @@ void (APIENTRY *glEnableVertexAttribArray)(GLuint index) = nullptr;
 // Draw functions
 void (APIENTRY *glDrawElements)(GLenum mode, GLsizei count, GLenum type, const void* indices) = nullptr;
 
+// Texture functions
+void (APIENTRY *glGenTextures)(GLsizei n, GLuint* textures) = nullptr;
+void (APIENTRY *glDeleteTextures)(GLsizei n, const GLuint* textures) = nullptr;
+void (APIENTRY *glBindTexture)(GLenum target, GLuint texture) = nullptr;
+void (APIENTRY *glTexImage2D)(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void* pixels) = nullptr;
+void (APIENTRY *glTexParameteri)(GLenum target, GLenum pname, GLint param) = nullptr;
+void (APIENTRY *glActiveTexture)(GLenum texture) = nullptr;
+void (APIENTRY *glGenerateMipmap)(GLenum target) = nullptr;
+
 bool LoadGLFunctions() {
     static bool loaded = false;
     if (loaded) return true;
@@ -78,8 +87,18 @@ bool LoadGLFunctions() {
     // Draw functions
     glDrawElements = (decltype(glDrawElements))SDL_GL_GetProcAddress("glDrawElements");
     
+    // Texture functions
+    glGenTextures = (decltype(glGenTextures))SDL_GL_GetProcAddress("glGenTextures");
+    glDeleteTextures = (decltype(glDeleteTextures))SDL_GL_GetProcAddress("glDeleteTextures");
+    glBindTexture = (decltype(glBindTexture))SDL_GL_GetProcAddress("glBindTexture");
+    glTexImage2D = (decltype(glTexImage2D))SDL_GL_GetProcAddress("glTexImage2D");
+    glTexParameteri = (decltype(glTexParameteri))SDL_GL_GetProcAddress("glTexParameteri");
+    glActiveTexture = (decltype(glActiveTexture))SDL_GL_GetProcAddress("glActiveTexture");
+    glGenerateMipmap = (decltype(glGenerateMipmap))SDL_GL_GetProcAddress("glGenerateMipmap");
+    
     // Verify critical functions loaded
-    if (!glCreateShader || !glCreateProgram || !glGenVertexArrays || !glGenBuffers) {
+    if (!glCreateShader || !glCreateProgram || !glGenVertexArrays || !glGenBuffers || 
+        !glGenTextures || !glActiveTexture) {
         SDL_Log("Failed to load required OpenGL functions");
         return false;
     }

@@ -45,5 +45,14 @@ extern void (APIENTRY *glEnableVertexAttribArray)(GLuint index);
 // Draw functions
 extern void (APIENTRY *glDrawElements)(GLenum mode, GLsizei count, GLenum type, const void* indices);
 
+// Texture functions
+extern void (APIENTRY *glGenTextures)(GLsizei n, GLuint* textures);
+extern void (APIENTRY *glDeleteTextures)(GLsizei n, const GLuint* textures);
+extern void (APIENTRY *glBindTexture)(GLenum target, GLuint texture);
+extern void (APIENTRY *glTexImage2D)(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void* pixels);
+extern void (APIENTRY *glTexParameteri)(GLenum target, GLenum pname, GLint param);
+extern void (APIENTRY *glActiveTexture)(GLenum texture);
+extern void (APIENTRY *glGenerateMipmap)(GLenum target);
+
 } // namespace engine
 

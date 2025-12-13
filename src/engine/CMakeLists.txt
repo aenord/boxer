@@ -9,6 +9,7 @@ add_library(engine STATIC
     src/gfx/VertexBuffer.cpp
     src/gfx/IndexBuffer.cpp
     src/gfx/VertexArray.cpp
+    src/gfx/Texture2D.cpp
     src/gfx/Renderer2D.cpp
 )
 
