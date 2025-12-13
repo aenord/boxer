@@ -11,7 +11,12 @@ namespace engine {
  */
 class VertexBuffer {
 public:
+    // Create static buffer with data
     VertexBuffer(const void* data, size_t size);
+    
+    // Create buffer (optionally dynamic for frequent updates)
+    VertexBuffer(const void* data, size_t size, bool dynamic);
+    
     ~VertexBuffer();
     
     // Non-copyable
@@ -20,6 +25,9 @@ public:
     
     void Bind() const;
     void Unbind() const;
+    
+    // Update buffer data (for dynamic buffers)
+    void SetData(const void* data, size_t size);
     
     GLuint GetID() const { return m_bufferID; }
 

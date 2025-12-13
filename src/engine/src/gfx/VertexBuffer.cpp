@@ -3,10 +3,14 @@
 
 namespace engine {
 
-VertexBuffer::VertexBuffer(const void* data, size_t size) {
+VertexBuffer::VertexBuffer(const void* data, size_t size)
+    : VertexBuffer(data, size, false) {
+}
+
+VertexBuffer::VertexBuffer(const void* data, size_t size, bool dynamic) {
     glGenBuffers(1, &m_bufferID);
     glBindBuffer(GL_ARRAY_BUFFER, m_bufferID);
-    glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, size, data, dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
 }
 
 VertexBuffer::~VertexBuffer() {
@@ -21,6 +25,11 @@ void VertexBuffer::Bind() const {
 
 void VertexBuffer::Unbind() const {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void VertexBuffer::SetData(const void* data, size_t size) {
+    glBindBuffer(GL_ARRAY_BUFFER, m_bufferID);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, size, data);
 }
 
 } // namespace engine

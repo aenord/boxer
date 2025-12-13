@@ -11,23 +11,25 @@
 
 namespace engine {
 
-// Embedded shader sources
+// Embedded shader sources for batched rendering
 static const char* s_vertexShaderSource = R"(
 #version 330 core
 layout(location = 0) in vec2 a_pos;
 layout(location = 1) in vec2 a_uv;
 layout(location = 2) in vec4 a_color;
+layout(location = 3) in float a_texIndex;
 
 uniform mat4 u_viewproj;
-uniform mat4 u_transform;
 
 out vec2 v_uv;
 out vec4 v_color;
+flat out float v_texIndex;
 
 void main() {
     v_uv = a_uv;
     v_color = a_color;
-    gl_Position = u_viewproj * u_transform * vec4(a_pos, 0.0, 1.0);
+    v_texIndex = a_texIndex;
+    gl_Position = u_viewproj * vec4(a_pos, 0.0, 1.0);
 }
 )";
 
@@ -35,19 +37,16 @@ static const char* s_fragmentShaderSource = R"(
 #version 330 core
 in vec2 v_uv;
 in vec4 v_color;
+flat in float v_texIndex;
 
-uniform vec4 u_color;
-uniform sampler2D u_texture;
-uniform int u_useTexture;
+uniform sampler2D u_textures[16];
 
 out vec4 FragColor;
 
 void main() {
-    vec4 finalColor = v_color;
-    if (u_useTexture == 1) {
-        finalColor = texture(u_texture, v_uv) * v_color;
-    }
-    FragColor = finalColor * u_color;
+    int index = int(v_texIndex);
+    vec4 texColor = texture(u_textures[index], v_uv);
+    FragColor = texColor * v_color;
 }
 )";
 
@@ -74,8 +73,12 @@ bool Renderer2D::Init() {
     CreateQuadMesh();
     CreateDefaultTexture();
     
+    // Initialize texture slots (slot 0 = default white texture)
+    m_textureSlots.fill(nullptr);
+    m_textureSlots[0] = m_defaultTexture.get();
+    
     m_initialized = true;
-    SDL_Log("Renderer2D initialized");
+    SDL_Log("Renderer2D initialized (batched, max %u quads)", MAX_QUADS);
     return true;
 }
 
@@ -93,25 +96,44 @@ void Renderer2D::CreateShader() {
 }
 
 void Renderer2D::CreateQuadMesh() {
-    // Quad vertices: position (2), texcoord (2), color (4) = 8 floats per vertex
-    // Unit quad centered at origin: -0.5 to 0.5
-    float vertices[] = {
-        // pos          uv        color (white)
-        -0.5f, -0.5f,  0.0f, 0.0f,  1.0f, 1.0f, 1.0f, 1.0f,  // bottom-left
-         0.5f, -0.5f,  1.0f, 0.0f,  1.0f, 1.0f, 1.0f, 1.0f,  // bottom-right
-         0.5f,  0.5f,  1.0f, 1.0f,  1.0f, 1.0f, 1.0f, 1.0f,  // top-right
-        -0.5f,  0.5f,  0.0f, 1.0f,  1.0f, 1.0f, 1.0f, 1.0f   // top-left
-    };
+    // Reserve space for vertices
+    m_vertices.reserve(MAX_VERTICES);
     
-    uint32_t indices[] = { 0, 1, 2, 2, 3, 0 };
-    
+    // Create dynamic VBO (empty, will be filled each frame)
     m_quadVAO = std::make_unique<VertexArray>();
-    m_quadVBO = std::make_unique<VertexBuffer>(vertices, sizeof(vertices));
-    m_quadIBO = std::make_unique<IndexBuffer>(indices, 6);
+    m_quadVBO = std::make_unique<VertexBuffer>(nullptr, MAX_VERTICES * sizeof(QuadVertex), true);
     
+    // Pre-generate all indices (pattern: 0,1,2, 2,3,0, 4,5,6, 6,7,4, ...)
+    std::vector<uint32_t> indices(MAX_INDICES);
+    uint32_t offset = 0;
+    for (uint32_t i = 0; i < MAX_INDICES; i += INDICES_PER_QUAD) {
+        indices[i + 0] = offset + 0;
+        indices[i + 1] = offset + 1;
+        indices[i + 2] = offset + 2;
+        indices[i + 3] = offset + 2;
+        indices[i + 4] = offset + 3;
+        indices[i + 5] = offset + 0;
+        offset += VERTICES_PER_QUAD;
+    }
+    m_quadIBO = std::make_unique<IndexBuffer>(indices.data(), MAX_INDICES);
+    
+    // Configure VAO with batched vertex layout
     m_quadVAO->Bind();
     m_quadVBO->Bind();
-    m_quadVAO->SetQuadLayout();
+    
+    // Position (vec2)
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(QuadVertex), (void*)offsetof(QuadVertex, position));
+    glEnableVertexAttribArray(0);
+    // TexCoord (vec2)
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(QuadVertex), (void*)offsetof(QuadVertex, texCoord));
+    glEnableVertexAttribArray(1);
+    // Color (vec4)
+    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(QuadVertex), (void*)offsetof(QuadVertex, color));
+    glEnableVertexAttribArray(2);
+    // TexIndex (float)
+    glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(QuadVertex), (void*)offsetof(QuadVertex, texIndex));
+    glEnableVertexAttribArray(3);
+    
     m_quadIBO->Bind();
     m_quadVAO->Unbind();
 }
@@ -122,64 +144,132 @@ void Renderer2D::BeginFrame(const Camera2D& camera) {
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     
-    m_shader->Bind();
-    m_shader->SetMat4("u_viewproj", m_viewProjection);
-    m_shader->SetInt("u_useTexture", 0);  // Default to no texture (will be set per-draw)
+    StartBatch();
 }
 
 void Renderer2D::EndFrame() {
+    Flush();
+}
+
+void Renderer2D::StartBatch() {
+    m_vertices.clear();
+    m_indexCount = 0;
+    m_textureSlotIndex = 1;  // Reset (0 is default texture)
+}
+
+void Renderer2D::Flush() {
+    if (m_vertices.empty()) return;
+    
+    // Upload vertex data
+    m_quadVBO->SetData(m_vertices.data(), m_vertices.size() * sizeof(QuadVertex));
+    
+    // Bind shader and set uniforms
+    m_shader->Bind();
+    m_shader->SetMat4("u_viewproj", m_viewProjection);
+    
+    // Bind textures to all slots (unused slots get default texture)
+    for (uint32_t i = 0; i < MAX_TEXTURE_SLOTS; ++i) {
+        if (i < m_textureSlotIndex && m_textureSlots[i]) {
+            m_textureSlots[i]->Bind(i);
+        } else {
+            m_defaultTexture->Bind(i);
+        }
+    }
+    
+    // Set texture sampler uniforms (only once per init would be better, but simple for now)
+    for (uint32_t i = 0; i < MAX_TEXTURE_SLOTS; ++i) {
+        char name[16];
+        snprintf(name, sizeof(name), "u_textures[%u]", i);
+        m_shader->SetInt(name, i);
+    }
+    
+    // Draw all quads in one call
+    m_quadVAO->Bind();
+    glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, nullptr);
+    
     m_shader->Unbind();
 }
 
 void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, const Vec4& color) {
-    DrawQuadInternal(position, size, color, nullptr);
+    AddQuadToBatch(position, size, color, nullptr);
 }
 
 void Renderer2D::DrawQuad(const Vec2& position, const Vec2& size, const Texture2D& texture, 
                           const Vec4& tint) {
-    DrawQuadInternal(position, size, tint, &texture);
+    AddQuadToBatch(position, size, tint, &texture);
 }
 
-void Renderer2D::DrawQuadInternal(const Vec2& position, const Vec2& size, const Vec4& color,
-                                   const Texture2D* texture) {
+void Renderer2D::AddQuadToBatch(const Vec2& position, const Vec2& size, const Vec4& color,
+                                 const Texture2D* texture) {
     if (!m_initialized) return;
     
-    // Build transform matrix: scale then translate (column-major order)
-    // Matrix layout: [scaleX, 0, 0, 0, 0, scaleY, 0, 0, 0, 0, 1, 0, posX, posY, 0, 1]
-    Mat4 transform;
-    transform.m[0] = size.x;   // scale X
-    transform.m[1] = 0.0f;
-    transform.m[2] = 0.0f;
-    transform.m[3] = 0.0f;
-    transform.m[4] = 0.0f;
-    transform.m[5] = size.y;   // scale Y
-    transform.m[6] = 0.0f;
-    transform.m[7] = 0.0f;
-    transform.m[8] = 0.0f;
-    transform.m[9] = 0.0f;
-    transform.m[10] = 1.0f;   // scale Z
-    transform.m[11] = 0.0f;
-    transform.m[12] = position.x;  // translation X
-    transform.m[13] = position.y;  // translation Y
-    transform.m[14] = 0.0f;
-    transform.m[15] = 1.0f;
-    
-    // Set uniforms
-    m_shader->SetMat4("u_transform", transform);
-    m_shader->SetVec4("u_color", color);
-    
-    // Handle texture - always bind something to satisfy macOS OpenGL driver
-    if (texture && texture->IsValid()) {
-        texture->Bind(0);
-        m_shader->SetInt("u_useTexture", 1);
-    } else {
-        m_defaultTexture->Bind(0);
-        m_shader->SetInt("u_useTexture", 0);
+    // Check if batch is full
+    if (m_indexCount >= MAX_INDICES) {
+        Flush();
+        StartBatch();
     }
-    m_shader->SetInt("u_texture", 0);
     
-    m_quadVAO->Bind();
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+    // Find or assign texture slot
+    float texIndex = 0.0f;  // Default texture
+    if (texture && texture->IsValid()) {
+        // Check if texture is already in a slot
+        bool found = false;
+        for (uint32_t i = 1; i < m_textureSlotIndex; ++i) {
+            if (m_textureSlots[i] == texture) {
+                texIndex = static_cast<float>(i);
+                found = true;
+                break;
+            }
+        }
+        
+        // Assign new slot if not found
+        if (!found) {
+            if (m_textureSlotIndex >= MAX_TEXTURE_SLOTS) {
+                // Out of texture slots, flush and start new batch
+                Flush();
+                StartBatch();
+            }
+            texIndex = static_cast<float>(m_textureSlotIndex);
+            m_textureSlots[m_textureSlotIndex] = texture;
+            m_textureSlotIndex++;
+        }
+    }
+    
+    // Compute world-space vertex positions
+    // Quad is centered at position, with given size
+    float halfW = size.x * 0.5f;
+    float halfH = size.y * 0.5f;
+    
+    // Bottom-left
+    m_vertices.push_back({
+        Vec2(position.x - halfW, position.y - halfH),
+        Vec2(0.0f, 0.0f),
+        color,
+        texIndex
+    });
+    // Bottom-right
+    m_vertices.push_back({
+        Vec2(position.x + halfW, position.y - halfH),
+        Vec2(1.0f, 0.0f),
+        color,
+        texIndex
+    });
+    // Top-right
+    m_vertices.push_back({
+        Vec2(position.x + halfW, position.y + halfH),
+        Vec2(1.0f, 1.0f),
+        color,
+        texIndex
+    });
+    // Top-left
+    m_vertices.push_back({
+        Vec2(position.x - halfW, position.y + halfH),
+        Vec2(0.0f, 1.0f),
+        color,
+        texIndex
+    });
+    
+    m_indexCount += INDICES_PER_QUAD;
 }
 
 void Renderer2D::CreateDefaultTexture() {

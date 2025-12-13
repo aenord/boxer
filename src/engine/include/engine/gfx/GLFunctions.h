@@ -38,6 +38,7 @@ extern void (APIENTRY *glDeleteVertexArrays)(GLsizei n, const GLuint* arrays);
 extern void (APIENTRY *glGenBuffers)(GLsizei n, GLuint* buffers);
 extern void (APIENTRY *glBindBuffer)(GLenum target, GLuint buffer);
 extern void (APIENTRY *glBufferData)(GLenum target, GLsizeiptr size, const void* data, GLenum usage);
+extern void (APIENTRY *glBufferSubData)(GLenum target, GLintptr offset, GLsizeiptr size, const void* data);
 extern void (APIENTRY *glDeleteBuffers)(GLsizei n, const GLuint* buffers);
 extern void (APIENTRY *glVertexAttribPointer)(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void* pointer);
 extern void (APIENTRY *glEnableVertexAttribArray)(GLuint index);

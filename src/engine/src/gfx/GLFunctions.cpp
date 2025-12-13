@@ -32,6 +32,7 @@ void (APIENTRY *glDeleteVertexArrays)(GLsizei n, const GLuint* arrays) = nullptr
 void (APIENTRY *glGenBuffers)(GLsizei n, GLuint* buffers) = nullptr;
 void (APIENTRY *glBindBuffer)(GLenum target, GLuint buffer) = nullptr;
 void (APIENTRY *glBufferData)(GLenum target, GLsizeiptr size, const void* data, GLenum usage) = nullptr;
+void (APIENTRY *glBufferSubData)(GLenum target, GLintptr offset, GLsizeiptr size, const void* data) = nullptr;
 void (APIENTRY *glDeleteBuffers)(GLsizei n, const GLuint* buffers) = nullptr;
 void (APIENTRY *glVertexAttribPointer)(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void* pointer) = nullptr;
 void (APIENTRY *glEnableVertexAttribArray)(GLuint index) = nullptr;
@@ -80,6 +81,7 @@ bool LoadGLFunctions() {
     glGenBuffers = (decltype(glGenBuffers))SDL_GL_GetProcAddress("glGenBuffers");
     glBindBuffer = (decltype(glBindBuffer))SDL_GL_GetProcAddress("glBindBuffer");
     glBufferData = (decltype(glBufferData))SDL_GL_GetProcAddress("glBufferData");
+    glBufferSubData = (decltype(glBufferSubData))SDL_GL_GetProcAddress("glBufferSubData");
     glDeleteBuffers = (decltype(glDeleteBuffers))SDL_GL_GetProcAddress("glDeleteBuffers");
     glVertexAttribPointer = (decltype(glVertexAttribPointer))SDL_GL_GetProcAddress("glVertexAttribPointer");
     glEnableVertexAttribArray = (decltype(glEnableVertexAttribArray))SDL_GL_GetProcAddress("glEnableVertexAttribArray");
