@@ -1,5 +1,6 @@
 add_library(engine STATIC
     src/core/Engine.cpp
+    src/core/SceneManager.cpp
     src/platform/Window.cpp
     src/platform/Input.cpp
     src/gfx/GLContext.cpp
