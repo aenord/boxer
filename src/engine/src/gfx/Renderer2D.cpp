@@ -5,6 +5,7 @@
 #include "engine/gfx/IndexBuffer.h"
 #include "engine/gfx/Texture2D.h"
 #include "engine/gfx/GLFunctions.h"
+#include "engine/gfx/GLUtils.h"
 #include "engine/gfx/Camera2D.h"
 #include <SDL3/SDL_opengl.h>
 #include <SDL3/SDL_log.h>
@@ -58,6 +59,12 @@ Renderer2D::~Renderer2D() {
 bool Renderer2D::Init() {
     if (m_initialized) return true;
     
+    // Verify OpenGL context exists before proceeding
+    if (!IsGLContextValid()) {
+        SDL_Log("Renderer2D::Init() called before OpenGL context was created!");
+        return false;
+    }
+    
     // Load OpenGL functions
     if (!LoadGLFunctions()) {
         SDL_Log("Renderer2D: Failed to load OpenGL functions");
@@ -67,6 +74,7 @@ bool Renderer2D::Init() {
     // Enable alpha blending for transparent sprites
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    GL_CHECK_ERROR();
     
     CreateShader();
     if (!m_shader || !m_shader->IsValid()) {
@@ -76,6 +84,7 @@ bool Renderer2D::Init() {
     
     CreateQuadMesh();
     CreateDefaultTexture();
+    GL_CHECK_ERROR();
     
     // Initialize texture slots (slot 0 = default white texture)
     m_textureSlots.fill(nullptr);
@@ -194,6 +203,7 @@ void Renderer2D::Flush() {
     // Draw all quads in one call
     m_quadVAO->Bind();
     glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, nullptr);
+    GL_CHECK_ERROR();
     
     m_shader->Unbind();
 }
