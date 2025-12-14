@@ -64,6 +64,10 @@ bool Renderer2D::Init() {
         return false;
     }
     
+    // Enable alpha blending for transparent sprites
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
     CreateShader();
     if (!m_shader || !m_shader->IsValid()) {
         SDL_Log("Renderer2D: Failed to create shader");
