@@ -1,5 +1,4 @@
 #include "engine/gfx/Camera2D.h"
-#include "engine/math/MathUtils.h"
 #include <cmath>
 
 namespace engine {

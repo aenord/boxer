@@ -1,16 +1,11 @@
 #include "engine/core/Engine.h"
 #include "engine/gfx/Camera2D.h"
 #include "engine/gfx/Renderer2D.h"
-#include "engine/gfx/Texture2D.h"
 #include "engine/gfx/SpriteSheet.h"
 #include "engine/gfx/Tilemap.h"
 #include "engine/math/Vec2.h"
-#include "engine/math/Vec4.h"
-#include "engine/math/MathUtils.h"
 #include <SDL3/SDL_scancode.h>
 #include <SDL3/SDL_log.h>
-#include <vector>
-#include <cstdint>
 
 // Global instances
 static engine::Camera2D g_camera;
