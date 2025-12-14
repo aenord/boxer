@@ -3,6 +3,7 @@
 #include "engine/platform/Window.h"
 #include "engine/platform/Input.h"
 #include "engine/gfx/GLContext.h"
+#include <functional>
 
 namespace engine {
 
@@ -11,6 +12,10 @@ namespace engine {
  */
 class Engine {
 public:
+    // Callback types (allows lambdas, member functions, captures)
+    using UpdateCallback = std::function<void(float deltaTime, const Input& input)>;
+    using RenderCallback = std::function<void()>;
+
     Engine(const char* title, int width, int height);
     ~Engine();
 
@@ -21,11 +26,11 @@ public:
     const Input& GetInput() const { return m_input; }
     
     // Register callbacks for game logic
-    void SetUpdateCallback(void (*callback)(float deltaTime, const Input& input)) {
-        m_updateCallback = callback;
+    void SetUpdateCallback(UpdateCallback callback) {
+        m_updateCallback = std::move(callback);
     }
-    void SetRenderCallback(void (*callback)()) {
-        m_renderCallback = callback;
+    void SetRenderCallback(RenderCallback callback) {
+        m_renderCallback = std::move(callback);
     }
 
 private:
@@ -38,8 +43,8 @@ private:
     GLContext m_glContext;  // OpenGL rendering context
     
     // Game logic callbacks
-    void (*m_updateCallback)(float deltaTime, const Input& input) = nullptr;
-    void (*m_renderCallback)() = nullptr;
+    UpdateCallback m_updateCallback;
+    RenderCallback m_renderCallback;
 };
 
 } // namespace engine
