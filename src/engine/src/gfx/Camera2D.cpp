@@ -3,43 +3,44 @@
 
 namespace engine {
 
-Camera2D::Camera2D() : position(0.0f, 0.0f), zoom(1.0f), m_target(0.0f, 0.0f) {
+Camera2D::Camera2D() {
+    // Members initialized in header with default values
 }
 
 void Camera2D::Update(float deltaTime) {
-    if (!smoothEnabled || smoothSpeed <= 0.0f) {
+    if (!m_smoothEnabled || m_smoothSpeed <= 0.0f) {
         // No smoothing - snap to target immediately
-        position = m_target;
+        m_position = m_target;
         return;
     }
     
     // Lerp toward target position
     // Using exponential smoothing: lerp factor based on deltaTime
-    float t = 1.0f - std::exp(-smoothSpeed * deltaTime);
-    position = position.Lerp(m_target, t);
+    float t = 1.0f - std::exp(-m_smoothSpeed * deltaTime);
+    m_position = m_position.Lerp(m_target, t);
 }
 
 void Camera2D::SetPosition(const Vec2& pos) {
-    position = pos;
+    m_position = pos;
     m_target = pos;  // Also update target to prevent snapping
 }
 
 void Camera2D::SetTarget(const Vec2& target) {
     m_target = target;
-    if (!smoothEnabled) {
-        position = target;  // Snap immediately if smoothing disabled
+    if (!m_smoothEnabled) {
+        m_position = target;  // Snap immediately if smoothing disabled
     }
 }
 
 void Camera2D::Move(const Vec2& delta) {
-    position = position + delta;
+    m_position = m_position + delta;
     m_target = m_target + delta;
 }
 
 void Camera2D::MoveTarget(const Vec2& delta) {
     m_target = m_target + delta;
-    if (!smoothEnabled) {
-        position = m_target;
+    if (!m_smoothEnabled) {
+        m_position = m_target;
     }
 }
 
@@ -50,18 +51,18 @@ void Camera2D::SetViewportSize(float width, float height) {
 
 // Get position with pixel snapping applied if enabled
 Vec2 Camera2D::GetRenderPosition() const {
-    if (pixelSnap) {
-        return Vec2(std::floor(position.x), std::floor(position.y));
+    if (m_pixelSnap) {
+        return Vec2(std::floor(m_position.x), std::floor(m_position.y));
     }
-    return position;
+    return m_position;
 }
 
 Vec2 Camera2D::ScreenToWorld(const Vec2& screenPos) const {
     // Convert screen coordinates (0,0 = top-left) to world coordinates
     // Screen center = camera position
     Vec2 renderPos = GetRenderPosition();
-    float halfWidth = (m_viewportWidth / 2.0f) / zoom;
-    float halfHeight = (m_viewportHeight / 2.0f) / zoom;
+    float halfWidth = (m_viewportWidth / 2.0f) / m_zoom;
+    float halfHeight = (m_viewportHeight / 2.0f) / m_zoom;
     
     // Screen to NDC: (0,0) -> (-1,1), (width,height) -> (1,-1)
     float ndcX = (screenPos.x / m_viewportWidth) * 2.0f - 1.0f;
@@ -77,8 +78,8 @@ Vec2 Camera2D::ScreenToWorld(const Vec2& screenPos) const {
 Vec2 Camera2D::WorldToScreen(const Vec2& worldPos) const {
     // Convert world coordinates to screen coordinates
     Vec2 renderPos = GetRenderPosition();
-    float halfWidth = (m_viewportWidth / 2.0f) / zoom;
-    float halfHeight = (m_viewportHeight / 2.0f) / zoom;
+    float halfWidth = (m_viewportWidth / 2.0f) / m_zoom;
+    float halfHeight = (m_viewportHeight / 2.0f) / m_zoom;
     
     // World to NDC
     float ndcX = (worldPos.x - renderPos.x) / halfWidth;
@@ -97,8 +98,8 @@ Mat4 Camera2D::GetProjectionMatrix() const {
     Mat4 proj;
     
     // Calculate half-width and half-height based on zoom
-    float halfWidth = (m_viewportWidth / 2.0f) / zoom;
-    float halfHeight = (m_viewportHeight / 2.0f) / zoom;
+    float halfWidth = (m_viewportWidth / 2.0f) / m_zoom;
+    float halfHeight = (m_viewportHeight / 2.0f) / m_zoom;
     
     // Orthographic projection: maps [left, right] x [bottom, top] to [-1, 1] x [-1, 1]
     float left = -halfWidth;

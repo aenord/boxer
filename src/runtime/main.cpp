@@ -59,13 +59,13 @@ void GameRender() {
 int main() {
     engine::Engine engine("Tilemap Test", 800, 600);
     
-    // Initialize camera with smooth following and pixel snapping
+    // Initialize camera with smooth following
     g_camera.SetViewportSize(800.0f, 600.0f);
     g_camera.SetPosition(engine::Vec2(0.0f, 0.0f));
-    g_camera.zoom = 1.0f;
-    g_camera.smoothEnabled = true;
-    g_camera.smoothSpeed = 5.0f;   // Adjust for faster/slower follow
-    g_camera.pixelSnap = false;    // Set to true for crisp pixel art rendering
+    g_camera.SetZoom(1.0f);
+    g_camera.SetSmoothEnabled(true);
+    g_camera.SetSmoothSpeed(5.0f);   // Adjust for faster/slower follow
+    g_camera.SetPixelSnap(false);    // Set to true for crisp pixel art rendering
     
     // Initialize renderer
     if (!g_renderer.Init()) {
@@ -96,7 +96,7 @@ int main() {
             g_tilemap->GetWidth(), g_tilemap->GetHeight(),
             g_tilemap->GetWorldWidth(), g_tilemap->GetWorldHeight());
     SDL_Log("Camera: smooth=%.1f, pixelSnap=%s", 
-            g_camera.smoothSpeed, g_camera.pixelSnap ? "on" : "off");
+            g_camera.GetSmoothSpeed(), g_camera.IsPixelSnapEnabled() ? "on" : "off");
     SDL_Log("Controls: WASD/Arrow keys to move camera");
     
     // Register callbacks

@@ -14,31 +14,35 @@ class Camera2D {
 public:
     Camera2D();
     
-    // Camera properties (read-only for smooth mode, use SetPosition/SetTarget)
-    Vec2 position;  // Current camera position in world space
-    float zoom;     // Zoom level (1.0 = normal, >1.0 = zoomed in, <1.0 = zoomed out)
-    
-    // Smooth follow settings
-    float smoothSpeed = 5.0f;   // Lerp speed (higher = faster, 0 = instant)
-    bool smoothEnabled = false; // Enable smooth following
-    bool pixelSnap = false;     // Snap position to integer pixels for crisp pixel art
-    
     // Get combined view-projection matrix
     Mat4 GetViewProjectionMatrix() const;
     
     // Update camera (call once per frame for smooth movement)
     void Update(float deltaTime);
     
-    // Camera manipulation
-    void SetPosition(const Vec2& pos);  // Set position immediately
+    // Position manipulation
+    void SetPosition(const Vec2& pos);  // Set position immediately (also sets target)
     void SetTarget(const Vec2& target); // Set target for smooth follow
-    void Move(const Vec2& delta);       // Move relative to current position
-    void MoveTarget(const Vec2& delta); // Move target relative to current target
-    
-    // Get current target position
+    void Move(const Vec2& delta);       // Move position and target
+    void MoveTarget(const Vec2& delta); // Move only target
+    Vec2 GetPosition() const { return m_position; }
     Vec2 GetTarget() const { return m_target; }
     
-    // Set viewport dimensions (for projection calculation)
+    // Zoom (1.0 = normal, >1.0 = zoomed in, <1.0 = zoomed out)
+    void SetZoom(float zoom) { m_zoom = zoom; }
+    float GetZoom() const { return m_zoom; }
+    
+    // Smooth follow settings
+    void SetSmoothEnabled(bool enabled) { m_smoothEnabled = enabled; }
+    void SetSmoothSpeed(float speed) { m_smoothSpeed = speed; }
+    bool IsSmoothEnabled() const { return m_smoothEnabled; }
+    float GetSmoothSpeed() const { return m_smoothSpeed; }
+    
+    // Pixel snapping (for crisp pixel art rendering)
+    void SetPixelSnap(bool enabled) { m_pixelSnap = enabled; }
+    bool IsPixelSnapEnabled() const { return m_pixelSnap; }
+    
+    // Viewport dimensions (for projection calculation)
     void SetViewportSize(float width, float height);
     float GetViewportWidth() const { return m_viewportWidth; }
     float GetViewportHeight() const { return m_viewportHeight; }
@@ -48,9 +52,14 @@ public:
     Vec2 WorldToScreen(const Vec2& worldPos) const;
     
 private:
+    Vec2 m_position = Vec2(0.0f, 0.0f);  // Current camera position
+    Vec2 m_target = Vec2(0.0f, 0.0f);    // Target for smooth follow
+    float m_zoom = 1.0f;
+    float m_smoothSpeed = 5.0f;
+    bool m_smoothEnabled = false;
+    bool m_pixelSnap = false;
     float m_viewportWidth = 800.0f;
     float m_viewportHeight = 600.0f;
-    Vec2 m_target;  // Target position for smooth follow
     
     // Generate orthographic projection matrix
     Mat4 GetProjectionMatrix() const;
