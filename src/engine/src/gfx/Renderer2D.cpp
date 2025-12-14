@@ -97,6 +97,17 @@ void Renderer2D::Shutdown() {
 
 void Renderer2D::CreateShader() {
     m_shader = std::make_unique<Shader>(s_vertexShaderSource, s_fragmentShaderSource);
+    
+    // Set sampler uniforms once (texture unit indices never change)
+    if (m_shader && m_shader->IsValid()) {
+        m_shader->Bind();
+        for (uint32_t i = 0; i < MAX_TEXTURE_SLOTS; ++i) {
+            char name[20];
+            snprintf(name, sizeof(name), "u_textures[%u]", i);
+            m_shader->SetInt(name, static_cast<int>(i));
+        }
+        m_shader->Unbind();
+    }
 }
 
 void Renderer2D::CreateQuadMesh() {
@@ -178,13 +189,6 @@ void Renderer2D::Flush() {
         } else {
             m_defaultTexture->Bind(i);
         }
-    }
-    
-    // Set texture sampler uniforms (only once per init would be better, but simple for now)
-    for (uint32_t i = 0; i < MAX_TEXTURE_SLOTS; ++i) {
-        char name[16];
-        snprintf(name, sizeof(name), "u_textures[%u]", i);
-        m_shader->SetInt(name, i);
     }
     
     // Draw all quads in one call
