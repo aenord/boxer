@@ -25,6 +25,5 @@
 # Markdowns (for now)
 *.md
 
-# SDL submodule: generally do NOT ignore if it’s a submodule
 # If we ever have build files inside external/SDL, ignore them:
 external/SDL/build/
