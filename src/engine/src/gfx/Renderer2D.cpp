@@ -156,7 +156,7 @@ void Renderer2D::CreateQuadMesh() {
 void Renderer2D::BeginFrame(const Camera2D& camera) {
     m_viewProjection = camera.GetViewProjectionMatrix();
     
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClearColor(m_clearColor.x, m_clearColor.y, m_clearColor.z, m_clearColor.w);
     glClear(GL_COLOR_BUFFER_BIT);
     
     StartBatch();

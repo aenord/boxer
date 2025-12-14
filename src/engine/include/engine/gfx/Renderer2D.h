@@ -104,6 +104,13 @@ public:
     
     // Check if initialized
     bool IsInitialized() const { return m_initialized; }
+    
+    // Set background clear color
+    void SetClearColor(const Vec4& color) { m_clearColor = color; }
+    void SetClearColor(float r, float g, float b, float a = 1.0f) { 
+        m_clearColor = Vec4(r, g, b, a); 
+    }
+    Vec4 GetClearColor() const { return m_clearColor; }
 
 private:
     // OpenGL resources
@@ -122,6 +129,7 @@ private:
     uint32_t m_textureSlotIndex = 1;              // 0 is reserved for default texture
     
     Mat4 m_viewProjection;
+    Vec4 m_clearColor = Vec4(0.1f, 0.1f, 0.1f, 1.0f);  // Default dark gray
     bool m_initialized = false;
     
     // Flush accumulated quads to GPU
