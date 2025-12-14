@@ -4,9 +4,9 @@
 
 namespace engine {
 
-Engine::Engine(const char* title, int width, int height)
-    : m_window(title, width, height)           // Initialize SDL and create window
-    , m_glContext(m_window.GetWindow())        // Create OpenGL context from window
+Engine::Engine(const char* title, int width, int height, bool resizable)
+    : m_window(title, width, height, resizable)  // Initialize SDL and create window
+    , m_glContext(m_window.GetWindow())          // Create OpenGL context from window
 {
 }
 
@@ -15,6 +15,9 @@ Engine::~Engine() {
 }
 
 void Engine::Run() {
+    // Set initial viewport
+    glViewport(0, 0, m_window.GetWidth(), m_window.GetHeight());
+    
     // Frame rate target: 60 FPS = 16.67ms per frame
     const Uint64 targetFrameTimeNS = SDL_NS_PER_SECOND / 60;
     Uint64 lastFrameTime = SDL_GetPerformanceCounter();
@@ -34,10 +37,15 @@ void Engine::Run() {
             m_input.ProcessEvent(event);
         }
         
+        // Handle window resize (updates glViewport, notifies callback)
+        if (m_window.WasResized()) {
+            HandleResize();
+        }
+        
         // Update game logic first (check justPressed before it gets reset)
         Update(deltaTime);
         
-        // Update input state: process timers and reset justPressed/justReleased flags for next frame
+        // Update input state: reset justPressed/justReleased flags for next frame
         m_input.Update(deltaTime);
         
         // Render frame
@@ -51,6 +59,19 @@ void Engine::Run() {
         if (elapsedNS < targetFrameTimeNS) {
             SDL_DelayNS(targetFrameTimeNS - elapsedNS);
         }
+    }
+}
+
+void Engine::HandleResize() {
+    int width = m_window.GetWidth();
+    int height = m_window.GetHeight();
+    
+    // Update OpenGL viewport to match new window size
+    glViewport(0, 0, width, height);
+    
+    // Notify game code so it can update camera, UI, etc.
+    if (m_resizeCallback) {
+        m_resizeCallback(width, height);
     }
 }
 
