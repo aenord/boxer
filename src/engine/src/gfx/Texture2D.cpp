@@ -6,7 +6,7 @@
 
 namespace engine {
 
-Texture2D::Texture2D(const std::string& path) {
+Texture2D::Texture2D(const std::string& path, TextureFilter filter) {
     // Load image using stb_image (supports PNG, JPG, BMP, etc.)
     int width, height, channels;
     stbi_set_flip_vertically_on_load(true);  // OpenGL expects bottom-left origin
@@ -17,7 +17,7 @@ Texture2D::Texture2D(const std::string& path) {
         return;
     }
     
-    CreateFromData(data, width, height);
+    CreateFromData(data, width, height, filter);
     stbi_image_free(data);
     
     if (m_textureID != 0) {
@@ -25,8 +25,8 @@ Texture2D::Texture2D(const std::string& path) {
     }
 }
 
-Texture2D::Texture2D(const uint8_t* data, int width, int height) {
-    CreateFromData(data, width, height);
+Texture2D::Texture2D(const uint8_t* data, int width, int height, TextureFilter filter) {
+    CreateFromData(data, width, height, filter);
 }
 
 Texture2D::~Texture2D() {
@@ -64,7 +64,8 @@ Texture2D& Texture2D::operator=(Texture2D&& other) noexcept {
 // Upload RGBA pixel data to GPU and create OpenGL texture
 // data: RGBA pixel data (4 bytes per pixel)
 // width/height: image dimensions in pixels
-void Texture2D::CreateFromData(const uint8_t* data, int width, int height) {
+// filter: Nearest for pixel art, Linear for smooth scaling
+void Texture2D::CreateFromData(const uint8_t* data, int width, int height, TextureFilter filter) {
     m_width = width;
     m_height = height;
     
@@ -75,9 +76,10 @@ void Texture2D::CreateFromData(const uint8_t* data, int width, int height) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     
-    // Texture filtering: linear for smooth scaling (use GL_NEAREST for pixel art)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // Texture filtering: Nearest for pixel-perfect, Linear for smooth
+    GLenum glFilter = (filter == TextureFilter::Nearest) ? GL_NEAREST : GL_LINEAR;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, glFilter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, glFilter);
     
     // Upload pixel data to GPU
     // GL_RGBA: internal format and source format
@@ -87,7 +89,8 @@ void Texture2D::CreateFromData(const uint8_t* data, int width, int height) {
     
     glBindTexture(GL_TEXTURE_2D, 0);
     
-    SDL_Log("Created texture ID=%u (%dx%d)", m_textureID, width, height);
+    const char* filterName = (filter == TextureFilter::Nearest) ? "nearest" : "linear";
+    SDL_Log("Created texture ID=%u (%dx%d, %s)", m_textureID, width, height, filterName);
 }
 
 // Bind texture to a texture slot for sampling in shaders

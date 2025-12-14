@@ -7,16 +7,26 @@
 namespace engine {
 
 /**
+ * Texture filtering mode
+ * Nearest: Pixel-perfect, sharp edges (best for pixel art)
+ * Linear: Smooth interpolation (best for high-res textures)
+ */
+enum class TextureFilter {
+    Nearest,  // GL_NEAREST - no interpolation
+    Linear    // GL_LINEAR - bilinear interpolation
+};
+
+/**
  * 2D texture wrapper for OpenGL
  * Loads image files and manages GPU texture resources
  */
 class Texture2D {
 public:
     // Load texture from file path
-    explicit Texture2D(const std::string& path);
+    explicit Texture2D(const std::string& path, TextureFilter filter = TextureFilter::Linear);
     
     // Create texture from raw pixel data (RGBA format)
-    Texture2D(const uint8_t* data, int width, int height);
+    Texture2D(const uint8_t* data, int width, int height, TextureFilter filter = TextureFilter::Linear);
     
     ~Texture2D();
     
@@ -44,7 +54,7 @@ private:
     int m_height = 0;
     
     // Create texture from raw RGBA data
-    void CreateFromData(const uint8_t* data, int width, int height);
+    void CreateFromData(const uint8_t* data, int width, int height, TextureFilter filter);
 };
 
 } // namespace engine
