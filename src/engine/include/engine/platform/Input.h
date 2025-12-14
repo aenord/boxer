@@ -6,15 +6,16 @@
 namespace engine {
 
 /**
- * Input state manager - tracks keyboard and mouse state with key repeat timers
- * and mouse delta tracking
+ * Input state manager - tracks keyboard and mouse state per frame.
+ * Provides pressed, justPressed, and justReleased queries.
+ * Mouse delta tracking for relative movement.
  */
 class Input {
 public:
     Input();
     ~Input();
     
-    // Update input state: reset mouse delta, update timers, and process justPressed/justReleased flags
+    // Update input state: reset justPressed/justReleased flags and mouse delta
     void Update(float deltaTime);
     
     // Process SDL event to update current input state
@@ -35,13 +36,11 @@ public:
     void GetMouseDelta(int* dx, int* dy) const;
     
 private:
-    // Key state structure for tracking press state and repeat timers
+    // Key state structure for tracking press state
     struct KeyState {
         bool pressed = false;
         bool justPressed = false;
         bool justReleased = false;
-        float delayTimer = 0.f;   // Initial delay before repeat starts (200ms)
-        float repeatTimer = 0.f;  // Time between repeats (35ms)
     };
     
     // Mouse button state structure
