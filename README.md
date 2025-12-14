@@ -19,7 +19,7 @@ cmake -S . -B build
 cmake --build build
 ```
 
-To run whatever my current test/demo is at the moment:
+To run whatever my current test/demo is at the moment (main.cpp):
 
 ```bash
 ./build/src/runtime/runtime
