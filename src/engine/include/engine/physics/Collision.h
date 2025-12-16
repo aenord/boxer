@@ -4,7 +4,7 @@
 
 namespace engine {
 
-// Axis-Aligned Bounding Box for collision detection
+// Axis-Aligned Bounding Box 
 struct AABB {
     Vec2 min;  // Bottom-left corner
     Vec2 max;  // Top-right corner
@@ -17,7 +17,7 @@ struct AABB {
         return AABB(position, position + size);
     }
 
-    // Creates AABB from center point and half-extents
+    // Creates AABB from center and radius
     static AABB FromCenter(const Vec2& center, const Vec2& halfSize) {
         return AABB(center - halfSize, center + halfSize);
     }
@@ -26,13 +26,13 @@ struct AABB {
     Vec2 GetSize() const { return max - min; }
     Vec2 GetHalfSize() const { return GetSize() * 0.5f; }
 
-    // Returns true if point is inside the box
+    // Returns true if point is inside the AABB
     bool Contains(const Vec2& point) const {
         return point.x >= min.x && point.x <= max.x &&
                point.y >= min.y && point.y <= max.y;
     }
 
-    // Returns true if this box overlaps another
+    // Returns true if boxes overlap
     bool Intersects(const AABB& other) const {
         return min.x <= other.max.x && max.x >= other.min.x &&
                min.y <= other.max.y && max.y >= other.min.y;
@@ -52,18 +52,27 @@ struct AABB {
         Encapsulate(other.max);
     }
 
-    // Returns a box expanded by the given amount on all sides
+    // Returns a box expanded on all sides
     AABB Expanded(float amount) const {
         return AABB(min - Vec2(amount, amount), max + Vec2(amount, amount));
     }
 
-    // Moves the box by offset
+    // Moves the box
     AABB Translated(const Vec2& offset) const {
         return AABB(min + offset, max + offset);
     }
 };
 
-// Collision query functions
+// Detailed collision information
+struct CollisionInfo {
+    bool hit;           // Whether collision occurred
+    Vec2 normal;        // Direction to push A out of B
+    float penetration;  // How far A is overlapping B (positive when overlapping)
+
+    CollisionInfo() : hit(false), normal(0, 0), penetration(0) {}
+};
+
+// Collision query and resolution functions
 namespace Collision {
 
     // Point tests
@@ -71,9 +80,57 @@ namespace Collision {
         return box.Contains(point);
     }
 
-    // Shape vs shape tests
+    // Quick overlap test (no details)
     inline bool AABBvsAABB(const AABB& a, const AABB& b) {
         return a.Intersects(b);
+    }
+
+    // Collision info between two AABBs
+    // Returns penetration depth and push direction (normal points from B to A)
+    inline CollisionInfo GetCollisionInfo(const AABB& a, const AABB& b) {
+        CollisionInfo info;
+
+        // Check for overlap
+        if (!a.Intersects(b)) {
+            return info;  // No collision, return default info
+        }
+
+        info.hit = true;
+
+        float overlapLeft = a.max.x - b.min.x;    
+        float overlapRight = b.max.x - a.min.x;   
+        float overlapBottom = a.max.y - b.min.y;  
+        float overlapTop = b.max.y - a.min.y;    
+
+        // Find minimum overlap and corresponding normal
+        float minOverlap = overlapLeft;
+        info.normal = Vec2(-1, 0);  // Push A left
+
+        if (overlapRight < minOverlap) {
+            minOverlap = overlapRight;
+            info.normal = Vec2(1, 0);  // Push A right
+        }
+        if (overlapBottom < minOverlap) {
+            minOverlap = overlapBottom;
+            info.normal = Vec2(0, -1);  // Push A down
+        }
+        if (overlapTop < minOverlap) {
+            minOverlap = overlapTop;
+            info.normal = Vec2(0, 1);  // Push A up
+        }
+
+        info.penetration = minOverlap;
+        return info;
+    }
+
+    // Returns the displacement vector to separate A from B (zero if no overlap)
+    // To move A out of B: position += GetSeparation(myBox, obstacleBox)
+    inline Vec2 GetSeparation(const AABB& a, const AABB& b) {
+        CollisionInfo info = GetCollisionInfo(a, b);
+        if (!info.hit) {
+            return Vec2(0, 0);
+        }
+        return info.normal * info.penetration;
     }
 
 } // namespace Collision
