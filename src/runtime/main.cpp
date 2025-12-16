@@ -48,50 +48,71 @@ public:
         // float moveSpeed = 200.0f * deltaTime;
         // engine::Vec2 moveDelta(0.0f, 0.0f);
 
-        // Player movement
-        engine::Vec2 moveDir(0.0f, 0.0f);
-        float moveSpeed = 200.0f;
+        // // Player movement
+        // engine::Vec2 moveDir(0.0f, 0.0f);
+        // float moveSpeed = 200.0f;
+        // float gravity = -10.0f;
 
-        if (input.IsKeyPressed(SDL_SCANCODE_LEFT) || input.IsKeyPressed(SDL_SCANCODE_A)) {
-            moveDir.x -= 1.0f;
-        }
-        if (input.IsKeyPressed(SDL_SCANCODE_RIGHT) || input.IsKeyPressed(SDL_SCANCODE_D)) {
-            moveDir.x += 1.0f;
-        }
-        if (input.IsKeyPressed(SDL_SCANCODE_UP) || input.IsKeyPressed(SDL_SCANCODE_W)) {
-            moveDir.y += 1.0f;
-        }
-        if (input.IsKeyPressed(SDL_SCANCODE_DOWN) || input.IsKeyPressed(SDL_SCANCODE_S)) {
-            moveDir.y -= 1.0f;
+        constexpr float MOVE_SPEED    = 300.0f;    
+        constexpr float GRAVITY       = -1200.0f;  
+        constexpr float JUMP_VELOCITY = 500.0f;   
+
+        // Move horizontally
+        float moveX = 0.0f;
+        if (input.IsKeyPressed(SDL_SCANCODE_LEFT) || input.IsKeyPressed(SDL_SCANCODE_A))
+            moveX -= 1.0f;
+        if (input.IsKeyPressed(SDL_SCANCODE_RIGHT) || input.IsKeyPressed(SDL_SCANCODE_D))
+            moveX += 1.0f;
+
+        m_playerVel.x = moveX * MOVE_SPEED;
+
+        // Jump
+        if (m_onGround &&
+            (input.IsKeyPressed(SDL_SCANCODE_SPACE) ||
+            input.IsKeyPressed(SDL_SCANCODE_UP) ||
+            input.IsKeyPressed(SDL_SCANCODE_W))) {
+            m_playerVel.y = JUMP_VELOCITY;
+            m_onGround = false;
         }
 
-        // Normalize diagonal movement
-        float len = std::sqrt(moveDir.x * moveDir.x + moveDir.y * moveDir.y);
-        if (len > 0.0f) {
-            moveDir.x /= len;
-            moveDir.y /= len;
-        }
+        // Apply gravitational accel
+        m_playerVel.y += GRAVITY * deltaTime;
 
-        // Apply movement
-        engine::Vec2 velocity = moveDir * moveSpeed * deltaTime;
-        engine::Vec2 newPos = m_playerPos + velocity;
+        // Integrate
+        engine::Vec2 newPos = m_playerPos + m_playerVel * deltaTime;
         engine::Vec2 halfSize = m_playerSize * 0.5f;
 
-        // Check collisions and resolve with push-to-edge
         m_isColliding = false;
+        m_onGround = false;
 
+        // Collide
         for (const auto& obstacle : m_obstacles) {
             engine::AABB playerBox = engine::AABB::FromCenter(newPos, halfSize);
             engine::Vec2 separation = engine::Collision::GetSeparation(playerBox, obstacle);
-            
+
             if (separation.x != 0.0f || separation.y != 0.0f) {
                 m_isColliding = true;
-                newPos = newPos + separation;
+                newPos += separation;
+
+                // Vertical collision
+                if (separation.y > 0.0f) {
+                    // Landed on something
+                    m_playerVel.y = 0.0f;
+                    m_onGround = true;
+                } else if (separation.y < 0.0f) {
+                    // Hit ceiling
+                    m_playerVel.y = 0.0f;
+                }
+
+                // Horizontal collision
+                if (separation.x != 0.0f) {
+                    m_playerVel.x = 0.0f;
+                }
             }
         }
 
         m_playerPos = newPos;
-        m_isMoving = (len > 0.0f);
+        m_isMoving = (moveX != 0.0f);
 
         m_camera.Update(deltaTime);
     }
@@ -131,8 +152,10 @@ private:
     // Player state
     engine::Vec2 m_playerPos;
     engine::Vec2 m_playerSize;
+    engine::Vec2 m_playerVel = engine::Vec2(0.0f, 0.0f);
     bool m_isMoving = false;
     bool m_isColliding = false;
+    bool m_onGround = false;
 
     // Obstacles
     std::vector<engine::AABB> m_obstacles;
