@@ -53,6 +53,12 @@ public:
         // float moveSpeed = 200.0f;
         // float gravity = -10.0f;
 
+        if (input.IsKeyJustPressed(SDL_SCANCODE_R)) {
+            ResetPlayer();
+            return; // Skip physics this frame
+        }
+
+
         constexpr float MOVE_SPEED    = 300.0f;    
         constexpr float GRAVITY       = -1200.0f;  
         constexpr float JUMP_VELOCITY = 500.0f;   
@@ -153,6 +159,8 @@ private:
     engine::Vec2 m_playerPos;
     engine::Vec2 m_playerSize;
     engine::Vec2 m_playerVel = engine::Vec2(0.0f, 0.0f);
+    engine::Vec2 m_spawnPos = engine::Vec2(0.0f, 0.0f);
+
     bool m_isMoving = false;
     bool m_isColliding = false;
     bool m_onGround = false;
@@ -182,6 +190,14 @@ private:
         renderer.DrawQuad(
             engine::Vec2(box.max.x - halfThick, box.GetCenter().y),
             engine::Vec2(thickness, size.y), color);
+    }
+
+    void ResetPlayer() {
+        m_playerPos = m_spawnPos;
+        m_playerVel = engine::Vec2(0.0f, 0.0f);
+        m_onGround = false;
+        m_isMoving = false;
+        m_isColliding = false;
     }
 };
 
