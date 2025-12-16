@@ -3,138 +3,191 @@
 #include "engine/core/SceneManager.h"
 #include "engine/gfx/Camera2D.h"
 #include "engine/gfx/Renderer2D.h"
-#include "engine/gfx/SpriteSheet.h"
-#include "engine/gfx/Tilemap.h"
+#include "engine/physics/Collision.h"
 #include "engine/math/Vec2.h"
 #include <SDL3/SDL_scancode.h>
 #include <SDL3/SDL_log.h>
+#include <cmath>
 
 /**
- * Example scene demonstrating the Scene system.
- * Contains a tilemap with camera controls.
+ * Test scene 
+ * - Player moves with WASD/arrows
  */
-class TilemapScene : public engine::Scene {
+class TestScene : public engine::Scene {
 public:
-    TilemapScene() = default;
-    
+    TestScene() = default;
+
     void OnEnter() override {
-        SDL_Log("TilemapScene: OnEnter");
-        
+        SDL_Log("TestScene entered");
+
         // Initialize camera
         m_camera.SetViewportSize(800.0f, 600.0f);
         m_camera.SetPosition(engine::Vec2(0.0f, 0.0f));
         m_camera.SetZoom(1.0f);
-        m_camera.SetSmoothEnabled(true);
-        m_camera.SetSmoothSpeed(5.0f);
-        m_camera.SetPixelSnap(false);
-        
-        // Load tile sprite sheet
-        if (!m_tileSheet.LoadFromFile("assets/tiles.json")) {
-            SDL_Log("Failed to load tile sheet");
-            return;
-        }
-        
-        // Create tilemap (8x6 tiles, 64px each)
-        m_tilemap = std::make_unique<engine::Tilemap>(8, 6, 64.0f);
-        m_tilemap->SetSpriteSheet(&m_tileSheet);
-        
-        // Map tile indices to sprite names
-        for (int i = 0; i < 8; ++i) {
-            m_tilemap->SetTileSprite(i, "tile_" + std::to_string(i));
-        }
-        
-        // Fill tilemap with a single tile type
-        m_tilemap->Fill(0);
-        
-        SDL_Log("Map size: %dx%d tiles (%.0fx%.0f pixels)",
-                m_tilemap->GetWidth(), m_tilemap->GetHeight(),
-                m_tilemap->GetWorldWidth(), m_tilemap->GetWorldHeight());
-        SDL_Log("Controls: WASD/Arrow keys to move camera");
+
+        // Player setup
+        m_playerPos = engine::Vec2(0.0f, 0.0f);
+        m_playerSize = engine::Vec2(48.0f, 48.0f);
+
+        // Create obstacle boxes
+        m_obstacles.push_back(engine::AABB::FromCenter(engine::Vec2(-150.0f, 0.0f), engine::Vec2(32.0f, 32.0f)));
+        m_obstacles.push_back(engine::AABB::FromCenter(engine::Vec2(150.0f, 0.0f), engine::Vec2(32.0f, 32.0f)));
+        m_obstacles.push_back(engine::AABB::FromCenter(engine::Vec2(0.0f, 150.0f), engine::Vec2(64.0f, 32.0f)));
+        m_obstacles.push_back(engine::AABB::FromCenter(engine::Vec2(0.0f, -150.0f), engine::Vec2(32.0f, 64.0f)));
+
+        SDL_Log("Controls: WASD/Arrow keys to move player");
+        SDL_Log("Player color: Blue=idle, Green=moving, Orange=colliding");
     }
-    
+
     void OnExit() override {
-        SDL_Log("TilemapScene: OnExit");
-        m_tilemap.reset();
+        SDL_Log("TestScene exited");
     }
-    
+
     void Update(float deltaTime, const engine::Input& input) override {
-        // Move camera target based on input
-        float moveSpeed = 200.0f * deltaTime;
-        engine::Vec2 moveDelta(0.0f, 0.0f);
-        
+        // // Move camera target based on input
+        // float moveSpeed = 200.0f * deltaTime;
+        // engine::Vec2 moveDelta(0.0f, 0.0f);
+
+        // Player movement
+        engine::Vec2 moveDir(0.0f, 0.0f);
+        float moveSpeed = 200.0f;
+
         if (input.IsKeyPressed(SDL_SCANCODE_LEFT) || input.IsKeyPressed(SDL_SCANCODE_A)) {
-            moveDelta.x -= moveSpeed;
+            moveDir.x -= 1.0f;
         }
         if (input.IsKeyPressed(SDL_SCANCODE_RIGHT) || input.IsKeyPressed(SDL_SCANCODE_D)) {
-            moveDelta.x += moveSpeed;
+            moveDir.x += 1.0f;
         }
         if (input.IsKeyPressed(SDL_SCANCODE_UP) || input.IsKeyPressed(SDL_SCANCODE_W)) {
-            moveDelta.y += moveSpeed;
+            moveDir.y += 1.0f;
         }
         if (input.IsKeyPressed(SDL_SCANCODE_DOWN) || input.IsKeyPressed(SDL_SCANCODE_S)) {
-            moveDelta.y -= moveSpeed;
+            moveDir.y -= 1.0f;
         }
-        
-        if (moveDelta.x != 0.0f || moveDelta.y != 0.0f) {
-            m_camera.MoveTarget(moveDelta);
+
+        // Normalize diagonal movement
+        float len = std::sqrt(moveDir.x * moveDir.x + moveDir.y * moveDir.y);
+        if (len > 0.0f) {
+            moveDir.x /= len;
+            moveDir.y /= len;
         }
-        
-        // Update camera (smooth follow)
+
+        // Apply movement
+        engine::Vec2 velocity = moveDir * moveSpeed * deltaTime;
+        engine::Vec2 newPos = m_playerPos + velocity;
+        engine::Vec2 halfSize = m_playerSize * 0.5f;
+
+        // Check collisions and resolve with push-to-edge
+        m_isColliding = false;
+
+        for (const auto& obstacle : m_obstacles) {
+            engine::AABB playerBox = engine::AABB::FromCenter(newPos, halfSize);
+            engine::Vec2 separation = engine::Collision::GetSeparation(playerBox, obstacle);
+            
+            if (separation.x != 0.0f || separation.y != 0.0f) {
+                m_isColliding = true;
+                newPos = newPos + separation;
+            }
+        }
+
+        m_playerPos = newPos;
+        m_isMoving = (len > 0.0f);
+
         m_camera.Update(deltaTime);
     }
-    
+
     void Render(engine::Renderer2D& renderer) override {
         renderer.BeginFrame(m_camera);
-        
-        // Draw tilemap centered in view
-        if (m_tilemap) {
-            engine::Vec2 offset(
-                -m_tilemap->GetWorldWidth() * 0.5f,
-                -m_tilemap->GetWorldHeight() * 0.5f
-            );
-            m_tilemap->Draw(renderer, offset);
+
+        // Draw obstacles (red boxes)
+        engine::Vec4 obstacleColor(0.9f, 0.2f, 0.2f, 1.0f);
+        for (const auto& obstacle : m_obstacles) {
+            renderer.DrawQuad(obstacle.GetCenter(), obstacle.GetSize(), obstacleColor);
         }
-        
+
+        // Determine player color based on state
+        engine::Vec4 playerColor;
+        if (m_isColliding) {
+            playerColor = engine::Vec4(1.0f, 0.5f, 0.0f, 1.0f);  // Orange: colliding
+        } else if (m_isMoving) {
+            playerColor = engine::Vec4(0.2f, 0.8f, 0.3f, 1.0f);  // Green: moving
+        } else {
+            playerColor = engine::Vec4(0.2f, 0.6f, 1.0f, 1.0f);  // Blue: idle
+        }
+
+        // Draw player
+        renderer.DrawQuad(m_playerPos, m_playerSize, playerColor);
+
+        // Draw player collision box outline (debug)
+        engine::AABB playerBox = engine::AABB::FromCenter(m_playerPos, m_playerSize * 0.5f);
+        DrawBoxOutline(renderer, playerBox, engine::Vec4(1.0f, 1.0f, 1.0f, 0.5f));
+
         renderer.EndFrame();
     }
 
 private:
     engine::Camera2D m_camera;
-    engine::SpriteSheet m_tileSheet;
-    std::unique_ptr<engine::Tilemap> m_tilemap;
+
+    // Player state
+    engine::Vec2 m_playerPos;
+    engine::Vec2 m_playerSize;
+    bool m_isMoving = false;
+    bool m_isColliding = false;
+
+    // Obstacles
+    std::vector<engine::AABB> m_obstacles;
+
+    // Helper to draw box outline
+    void DrawBoxOutline(engine::Renderer2D& renderer, const engine::AABB& box, 
+                        const engine::Vec4& color, float thickness = 2.0f) {
+        engine::Vec2 size = box.GetSize();
+        float halfThick = thickness * 0.5f;
+        
+        // Bottom
+        renderer.DrawQuad(
+            engine::Vec2(box.GetCenter().x, box.min.y + halfThick),
+            engine::Vec2(size.x, thickness), color);
+        // Top
+        renderer.DrawQuad(
+            engine::Vec2(box.GetCenter().x, box.max.y - halfThick),
+            engine::Vec2(size.x, thickness), color);
+        // Left
+        renderer.DrawQuad(
+            engine::Vec2(box.min.x + halfThick, box.GetCenter().y),
+            engine::Vec2(thickness, size.y), color);
+        // Right
+        renderer.DrawQuad(
+            engine::Vec2(box.max.x - halfThick, box.GetCenter().y),
+            engine::Vec2(thickness, size.y), color);
+    }
 };
 
 int main() {
-    engine::Engine engine("Scene System Test", 800, 600);
-    
-    // Initialize renderer (must happen after Engine creates GL context)
+    engine::Engine engine("Boxer Test Scene", 800, 600);
+
+    // Initialize renderer
     engine::Renderer2D renderer;
     if (!renderer.Init()) {
         SDL_Log("Failed to initialize Renderer2D");
         return 1;
     }
-    
-    // Create scene manager and push initial scene
+
+    renderer.SetClearColor(0.15f, 0.15f, 0.2f, 1.0f);
+
+    // Create scene manager and push test scene
     engine::SceneManager sceneManager;
-    sceneManager.PushScene(std::make_unique<TilemapScene>());
-    
-    // Set callbacks to use SceneManager
+    sceneManager.PushScene(std::make_unique<TestScene>());
+
     engine.SetUpdateCallback([&sceneManager](float dt, const engine::Input& input) {
         sceneManager.Update(dt, input);
     });
-    
+
     engine.SetRenderCallback([&sceneManager, &renderer]() {
         sceneManager.Render(renderer);
     });
-    
-    SDL_Log("Scene System Test");
-    SDL_Log("Using SceneManager with TilemapScene");
-    
-    // Run game loop
+
     engine.Run();
-    
-    // Clean up scenes before renderer is destroyed
     sceneManager.Clear();
-    
+
     return 0;
 }
